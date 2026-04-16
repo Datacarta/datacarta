@@ -1,4 +1,4 @@
-import type { BaseEdge, BaseNode, DatacartaGraph, EdgeType, TrustLevel } from "./types.js";
+import type { DatacartaGraph, TrustLevel } from "./types.js";
 
 const TRUST_ORDER: TrustLevel[] = ["unknown", "draft", "reviewed", "trusted", "deprecated"];
 
@@ -11,39 +11,6 @@ function isTrustedEnough(t: TrustLevel | undefined): boolean {
   return trustRank(t) >= trustRank("reviewed");
 }
 
-function nodeById(graph: DatacartaGraph): Map<string, BaseNode> {
-  return new Map(graph.nodes.map((n) => [n.id, n]));
-}
-
-function outgoing(graph: DatacartaGraph, nodeId: string, types?: EdgeType[]): BaseEdge[] {
-  return graph.edges.filter(
-    (e) => e.sourceId === nodeId && (!types || types.includes(e.type))
-  );
-}
-
-export interface EntitySummary {
-  id: string;
-  name: string;
-  description?: string;
-  grain?: string;
-  trustLevel?: TrustLevel;
-}
-
-export interface MetricSummary {
-  id: string;
-  name: string;
-  definition?: string;
-  powers?: string[];
-  trustLevel?: TrustLevel;
-}
-
-export interface JoinPathHint {
-  fromModelId: string;
-  toModelId: string;
-  viaEdgeIds: string[];
-  note?: string;
-}
-
 export interface ContextPackage {
   specVersion: string;
   generatedAt: string;
@@ -51,81 +18,65 @@ export interface ContextPackage {
   projectName: string;
   domains?: string[];
   compactSummary: string;
-  entitySummaries: EntitySummary[];
-  trustedDatasets: { id: string; name: string; type: string; grain?: string }[];
-  metricRegistry: MetricSummary[];
+  layerSummary: { layerId: string; layerName: string; layerType: string; modelCount: number }[];
+  trustedModels: { id: string; name: string; layerId: string; grain?: string }[];
+  metricRegistry: { id: string; name: string; domain: string; isKPI?: boolean; trustLevel: string }[];
   warnings: string[];
   caveats: string[];
-  recommendedJoinPaths: JoinPathHint[];
-  deprecatedAssets: { id: string; name: string; type: string }[];
+  deprecatedAssets: { id: string; name: string; layerId: string }[];
 }
 
 /**
  * Deterministic, structured context for LLM prompts — no model calls.
  */
 export function buildContextPackage(graph: DatacartaGraph): ContextPackage {
-  const index = nodeById(graph);
   const warnings: string[] = [];
   const caveats: string[] = [];
 
-  for (const n of graph.nodes) {
-    for (const c of n.caveats ?? []) caveats.push(`${n.name}: ${c}`);
-    if (n.trustLevel === "unknown" || n.trustLevel === "draft") {
-      warnings.push(`Low trust asset: ${n.type} "${n.name}" (${n.id})`);
-    }
-    if (n.status === "deprecated" || n.trustLevel === "deprecated") {
-      /* handled in deprecated list */
+  for (const m of graph.models) {
+    for (const c of m.caveats ?? []) caveats.push(`${m.name}: ${c}`);
+    if (m.trustLevel === "unknown" || m.trustLevel === "draft") {
+      warnings.push(`Low trust asset: model "${m.name}" (${m.id})`);
     }
   }
 
-  const entitySummaries: EntitySummary[] = graph.nodes
-    .filter((n) => n.type === "entity")
-    .map((n) => ({
-      id: n.id,
-      name: n.displayName ?? n.name,
-      description: n.description,
-      grain: n.grain,
-      trustLevel: n.trustLevel,
+  // Layer summary: count models per layer
+  const layerSummary = graph.layerDefinitions.map((layer) => ({
+    layerId: layer.id,
+    layerName: layer.name,
+    layerType: layer.type,
+    modelCount: graph.models.filter((m) => m.layerId === layer.id).length,
+  }));
+
+  // Trusted models: trustLevel "reviewed" or "trusted"
+  const trustedModels = graph.models
+    .filter((m) => isTrustedEnough(m.trustLevel) && m.trustLevel !== "deprecated")
+    .map((m) => ({
+      id: m.id,
+      name: m.displayName ?? m.name,
+      layerId: m.layerId,
+      grain: m.grain,
     }));
 
-  const trustedDatasets = graph.nodes.filter(
-    (n) =>
-      (n.type === "mart_model" || n.type === "raw_table") && isTrustedEnough(n.trustLevel)
-  );
-
-  const metricRegistry: MetricSummary[] = graph.nodes
-    .filter((n) => n.type === "metric")
-    .map((n) => {
-      const powers = outgoing(graph, n.id, ["powers"]).map((e) => {
-        const t = index.get(e.targetId);
-        return t?.name ?? e.targetId;
-      });
-      return {
-        id: n.id,
-        name: n.displayName ?? n.name,
-        definition: n.description,
-        powers,
-        trustLevel: n.trustLevel,
-      };
-    });
-
-  const deprecatedAssets = graph.nodes
-    .filter((n) => n.status === "deprecated" || n.trustLevel === "deprecated")
-    .map((n) => ({ id: n.id, name: n.name, type: n.type }));
-
-  const joinEdges = graph.edges.filter((e) => e.type === "joins_with");
-  const recommendedJoinPaths: JoinPathHint[] = joinEdges.map((e) => ({
-    fromModelId: e.sourceId,
-    toModelId: e.targetId,
-    viaEdgeIds: [e.id],
-    note: e.description,
+  // Metric registry from standalone metrics
+  const metricRegistry = graph.metrics.map((met) => ({
+    id: met.id,
+    name: met.displayName,
+    domain: met.domain,
+    isKPI: met.isKPI,
+    trustLevel: met.trustLevel,
   }));
+
+  // Deprecated assets: status or trustLevel "deprecated"
+  const deprecatedAssets = graph.models
+    .filter((m) => m.status === "deprecated" || m.trustLevel === "deprecated")
+    .map((m) => ({ id: m.id, name: m.name, layerId: m.layerId }));
 
   const lines: string[] = [
     `Project: ${graph.projectName} (${graph.projectId})`,
     ...(graph.domains?.length ? [`Domains: ${graph.domains.join(", ")}`] : []),
-    `Nodes: ${graph.nodes.length}, Edges: ${graph.edges.length}`,
-    `Trusted datasets: ${trustedDatasets.length}`,
+    `Layers: ${graph.layerDefinitions.length}, Models: ${graph.models.length}`,
+    `Trusted models: ${trustedModels.length}`,
     `Metrics: ${metricRegistry.length}`,
     `Deprecated assets: ${deprecatedAssets.length}`,
   ];
@@ -137,17 +88,11 @@ export function buildContextPackage(graph: DatacartaGraph): ContextPackage {
     projectName: graph.projectName,
     domains: graph.domains,
     compactSummary: lines.join("\n"),
-    entitySummaries,
-    trustedDatasets: trustedDatasets.map((n) => ({
-      id: n.id,
-      name: n.displayName ?? n.name,
-      type: n.type,
-      grain: n.grain,
-    })),
+    layerSummary,
+    trustedModels,
     metricRegistry,
     warnings,
     caveats,
-    recommendedJoinPaths,
     deprecatedAssets,
   };
 }
