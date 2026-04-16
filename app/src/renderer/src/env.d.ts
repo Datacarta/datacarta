@@ -1,0 +1,64 @@
+interface DatabricksIntrospectedColumn {
+  name: string;
+  type_text?: string;
+  type_name?: string;
+  nullable?: boolean;
+  position?: number;
+  comment?: string;
+}
+interface DatabricksIntrospectedTable {
+  name: string;
+  full_name?: string;
+  comment?: string;
+  columns?: DatabricksIntrospectedColumn[];
+}
+interface SnowflakeIntrospectedTable {
+  name: string;
+  columns: Array<{ name: string; type: string; nullable: boolean; comment?: string }>;
+}
+
+declare global {
+  interface Window {
+    datacarta: {
+      resolveSamplePath: () => Promise<string | null>;
+      readTextFile: (filePath: string) => Promise<string>;
+      openGraphJson: () => Promise<
+        { canceled: true } | { canceled: false; filePath: string; text: string }
+      >;
+      exportGraphJson: (
+        defaultName: string,
+        content: string
+      ) => Promise<{ canceled: true } | { canceled: false; filePath: string }>;
+      listProjects: () => Promise<string[]>;
+      readProject: (filename: string) => Promise<string>;
+      saveProject: (
+        filename: string,
+        content: string
+      ) => Promise<{ ok: true } | { ok: false; error: string }>;
+      introspectDatabricks: (config: {
+        workspace: string;
+        catalog: string;
+        schema: string;
+        token: string;
+        tables?: string;
+      }) => Promise<
+        | { ok: true; tables: DatabricksIntrospectedTable[] }
+        | { ok: false; error: string }
+      >;
+      introspectSnowflake: (config: {
+        account: string;
+        database: string;
+        schema: string;
+        warehouse: string;
+        token: string;
+        role?: string;
+        tables?: string;
+      }) => Promise<
+        | { ok: true; tables: SnowflakeIntrospectedTable[] }
+        | { ok: false; error: string }
+      >;
+    };
+  }
+}
+
+export {};
