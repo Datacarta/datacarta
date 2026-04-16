@@ -1,0 +1,582 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://datacarta.dev/schema/datacarta-graph.schema.json",
+  "title": "DatacartaContextGraph",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "specVersion",
+    "projectId",
+    "projectName",
+    "layerDefinitions",
+    "models",
+    "edges",
+    "metrics",
+    "dataMarts",
+    "blueprints",
+    "owners",
+    "teams"
+  ],
+  "properties": {
+    "specVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "projectId": { "type": "string", "minLength": 1 },
+    "projectName": { "type": "string", "minLength": 1 },
+    "projectDescription": { "type": "string" },
+    "domains": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "layerDefinitions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/layerDefinition" }
+    },
+    "models": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/model" }
+    },
+    "edges": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/modelEdge" }
+    },
+    "metrics": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/metric" }
+    },
+    "dataMarts": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/dataMart" }
+    },
+    "blueprints": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/modelBlueprint" }
+    },
+    "owners": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/owner" }
+    },
+    "teams": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/team" }
+    },
+    "governanceTemplate": { "type": "string" },
+    "governanceRules": { "$ref": "#/definitions/governanceRuleSet" }
+  },
+  "definitions": {
+    "layerType": {
+      "type": "string",
+      "enum": ["source", "raw", "staging", "intermediate", "mart", "semantic", "consumption"]
+    },
+    "trustLevel": {
+      "type": "string",
+      "enum": ["unknown", "draft", "reviewed", "trusted", "deprecated"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "draft", "deprecated"]
+    },
+    "edgeType": {
+      "type": "string",
+      "enum": ["depends_on", "defines", "powers", "maps_to", "joins_with"]
+    },
+    "logicalType": {
+      "type": "string",
+      "enum": ["string", "integer", "float", "boolean", "date", "timestamp", "json", "other"]
+    },
+    "scdRole": {
+      "type": "string",
+      "enum": ["tracking", "valid_from", "valid_to", "is_current"]
+    },
+    "aggregation": {
+      "type": "string",
+      "enum": ["count", "sum", "avg", "min", "max", "count_distinct", "custom"]
+    },
+    "joinType": {
+      "type": "string",
+      "enum": ["inner", "left", "full"]
+    },
+    "blueprintStatus": {
+      "type": "string",
+      "enum": ["idea", "drafting", "reviewed", "shipped"]
+    },
+    "transformationType": {
+      "type": "string",
+      "enum": ["cast", "rename", "filter", "aggregate", "window", "expression"]
+    },
+    "starRole": {
+      "type": "string",
+      "enum": ["dimension", "fact", "bridge", "staging", "unknown"]
+    },
+    "sourceOrigin": {
+      "type": "string",
+      "enum": ["frontend", "backend", "third_party"]
+    },
+    "ingestionMethod": {
+      "type": "string",
+      "enum": ["event_stream", "cdc", "batch_api", "file_drop", "manual"]
+    },
+    "schemaStability": {
+      "type": "string",
+      "enum": ["stable", "evolving", "volatile"]
+    },
+    "columnRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelId", "columnId"],
+      "properties": {
+        "modelId": { "type": "string", "minLength": 1 },
+        "columnId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "column": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "dataType"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "dataType": { "type": "string", "minLength": 1 },
+        "logicalType": { "$ref": "#/definitions/logicalType" },
+        "description": { "type": "string" },
+        "isPrimaryKey": { "type": "boolean" },
+        "isForeignKey": { "type": "boolean" },
+        "foreignKeyTarget": { "$ref": "#/definitions/columnRef" },
+        "isSurrogateKey": { "type": "boolean" },
+        "isNaturalKey": { "type": "boolean" },
+        "scdRole": { "$ref": "#/definitions/scdRole" },
+        "isRequired": { "type": "boolean" },
+        "defaultValue": { "type": "string" },
+        "businessLogic": { "type": "string" },
+        "sourceColumn": { "$ref": "#/definitions/columnRef" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "isMetric": { "type": "boolean" },
+        "isKPI": { "type": "boolean" }
+      }
+    },
+    "modelingIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "starRole": { "$ref": "#/definitions/starRole" },
+        "scdType": { "type": "integer", "enum": [0, 1, 2] },
+        "dataVaultRole": {
+          "type": "string",
+          "enum": ["hub", "link", "satellite", "none"]
+        }
+      }
+    },
+    "sourceClassification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["origin", "ingestionMethod"],
+      "properties": {
+        "origin": { "$ref": "#/definitions/sourceOrigin" },
+        "ingestionMethod": { "$ref": "#/definitions/ingestionMethod" },
+        "freshnessGuarantee": { "type": "string" },
+        "schemaStability": { "$ref": "#/definitions/schemaStability" }
+      }
+    },
+    "physicalLocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "warehouse": { "type": "string" },
+        "database": { "type": "string" },
+        "schema": { "type": "string" },
+        "relation": { "type": "string" }
+      }
+    },
+    "layerDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "type", "order"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "$ref": "#/definitions/layerType" },
+        "order": { "type": "integer" },
+        "color": { "type": "string" },
+        "domains": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "governanceRules": { "$ref": "#/definitions/governanceRuleSet" }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "layerId", "name", "columns", "trustLevel", "status"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "layerId": { "type": "string", "minLength": 1 },
+        "domain": { "type": "string" },
+        "name": { "type": "string", "minLength": 1 },
+        "displayName": { "type": "string" },
+        "description": { "type": "string" },
+        "grain": { "type": "string" },
+        "columns": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/column" }
+        },
+        "modelingIntent": { "$ref": "#/definitions/modelingIntent" },
+        "sourceClassification": { "$ref": "#/definitions/sourceClassification" },
+        "sql": { "type": "string" },
+        "sqlDialect": { "type": "string" },
+        "trustLevel": { "$ref": "#/definitions/trustLevel" },
+        "status": { "$ref": "#/definitions/status" },
+        "ownerId": { "type": "string" },
+        "teamId": { "type": "string" },
+        "physical": { "$ref": "#/definitions/physicalLocation" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "usageHints": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "caveats": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "modelEdge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "sourceId", "targetId"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "$ref": "#/definitions/edgeType" },
+        "sourceId": { "type": "string", "minLength": 1 },
+        "targetId": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "displayName",
+        "description",
+        "sourceModelIds",
+        "domain",
+        "trustLevel",
+        "status"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "displayName": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "expression": { "type": "string" },
+        "aggregation": { "$ref": "#/definitions/aggregation" },
+        "timeGrain": { "type": "string" },
+        "filters": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "sourceModelIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "domain": { "type": "string", "minLength": 1 },
+        "category": { "type": "string" },
+        "isKPI": { "type": "boolean" },
+        "ownerId": { "type": "string" },
+        "teamId": { "type": "string" },
+        "trustLevel": { "$ref": "#/definitions/trustLevel" },
+        "status": { "$ref": "#/definitions/status" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "caveats": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "joinKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fromColumn", "toColumn"],
+      "properties": {
+        "fromColumn": { "type": "string", "minLength": 1 },
+        "toColumn": { "type": "string", "minLength": 1 }
+      }
+    },
+    "joinPath": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fromModelId", "toModelId", "joinKeys", "joinType"],
+      "properties": {
+        "fromModelId": { "type": "string", "minLength": 1 },
+        "toModelId": { "type": "string", "minLength": 1 },
+        "joinKeys": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/joinKey" }
+        },
+        "joinType": { "$ref": "#/definitions/joinType" },
+        "notes": { "type": "string" }
+      }
+    },
+    "dataMart": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "description",
+        "domain",
+        "factModelIds",
+        "dimensionModelIds",
+        "metricIds",
+        "joinPaths"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "domain": { "type": "string", "minLength": 1 },
+        "factModelIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "dimensionModelIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "metricIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "joinPaths": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/joinPath" }
+        },
+        "ownerId": { "type": "string" },
+        "teamId": { "type": "string" }
+      }
+    },
+    "transformation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "column", "expression"],
+      "properties": {
+        "type": { "$ref": "#/definitions/transformationType" },
+        "column": { "type": "string", "minLength": 1 },
+        "expression": { "type": "string", "minLength": 1 }
+      }
+    },
+    "sourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelId", "columnsUsed"],
+      "properties": {
+        "modelId": { "type": "string", "minLength": 1 },
+        "columnsUsed": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "joinKey": { "$ref": "#/definitions/joinKey" },
+        "joinType": { "$ref": "#/definitions/joinType" },
+        "transformations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/transformation" }
+        }
+      }
+    },
+    "modelBlueprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "layerId",
+        "columns",
+        "grain",
+        "sourceRefs",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "displayName": { "type": "string" },
+        "description": { "type": "string" },
+        "layerId": { "type": "string", "minLength": 1 },
+        "domain": { "type": "string" },
+        "columns": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/column" }
+        },
+        "grain": { "type": "string", "minLength": 1 },
+        "modelingIntent": { "$ref": "#/definitions/modelingIntent" },
+        "sourceRefs": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/sourceRef" }
+        },
+        "sql": { "type": "string" },
+        "sqlDialect": { "type": "string" },
+        "status": { "$ref": "#/definitions/blueprintStatus" },
+        "linkedModelId": { "type": "string" },
+        "trustLevel": { "$ref": "#/definitions/trustLevel" },
+        "ownerId": { "type": "string" },
+        "teamId": { "type": "string" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "displayName": { "type": "string" },
+        "description": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "slackChannel": { "type": "string" }
+      }
+    },
+    "team": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "displayName": { "type": "string" },
+        "description": { "type": "string" },
+        "contactUrl": { "type": "string", "format": "uri" },
+        "slackChannel": { "type": "string" }
+      }
+    },
+    "columnNamingRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pattern", "description"],
+      "properties": {
+        "pattern": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "namingRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelPatterns", "columnPatterns"],
+      "properties": {
+        "modelPatterns": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "columnPatterns": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/columnNamingRule" }
+        }
+      }
+    },
+    "layerPlacementRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowedTransforms", "noBusinessLogicIn", "noRawJoinsIn"],
+      "properties": {
+        "allowedTransforms": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "noBusinessLogicIn": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/layerType" }
+        },
+        "noRawJoinsIn": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/layerType" }
+        }
+      }
+    },
+    "requiredColumnCondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "operator", "value"],
+      "properties": {
+        "field": { "type": "string" },
+        "operator": { "type": "string", "enum": ["eq", "neq"] },
+        "value": { "oneOf": [{ "type": "string" }, { "type": "number" }] }
+      }
+    },
+    "requiredColumn": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "pattern": { "type": "string" },
+        "role": { "type": "string" },
+        "dataType": { "type": "string" },
+        "when": { "$ref": "#/definitions/requiredColumnCondition" }
+      }
+    },
+    "columnRequirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requiredColumns"],
+      "properties": {
+        "requiredColumns": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/requiredColumn" }
+          }
+        }
+      }
+    },
+    "columnTypeRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["columnPattern", "requiredType"],
+      "properties": {
+        "columnPattern": { "type": "string" },
+        "requiredType": { "type": "string" }
+      }
+    },
+    "dataTypeRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["columnTypeMap"],
+      "properties": {
+        "columnTypeMap": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/columnTypeRule" }
+        }
+      }
+    },
+    "governanceRuleSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "naming": { "$ref": "#/definitions/namingRules" },
+        "layerPlacement": { "$ref": "#/definitions/layerPlacementRules" },
+        "columnRequirements": { "$ref": "#/definitions/columnRequirements" },
+        "dataTypes": { "$ref": "#/definitions/dataTypeRules" }
+      }
+    }
+  }
+}
