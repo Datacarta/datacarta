@@ -1,4 +1,4 @@
-import { GovernanceTemplate } from "./types.js";
+import type { GovernanceTemplate } from "./types.js";
 
 const TEMPLATES: GovernanceTemplate[] = [
   {

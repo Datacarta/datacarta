@@ -1,6 +1,6 @@
-import type { DatacartaGraph, TrustLevel } from "./types.js";
+import { TRUST_LEVELS, type DatacartaGraph, type TrustLevel } from "./types.js";
 
-const TRUST_ORDER: TrustLevel[] = ["unknown", "draft", "reviewed", "trusted", "deprecated"];
+const TRUST_ORDER: readonly TrustLevel[] = TRUST_LEVELS;
 
 function trustRank(t: TrustLevel | undefined): number {
   if (!t) return -1;

@@ -18,7 +18,7 @@
     "teams"
   ],
   "properties": {
-    "specVersion": { "type": "string", "pattern": "^0\\.[0-9]+\\.[0-9]+$" },
+    "specVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
     "projectId": { "type": "string", "minLength": 1 },
     "projectName": { "type": "string", "minLength": 1 },
     "projectDescription": { "type": "string" },

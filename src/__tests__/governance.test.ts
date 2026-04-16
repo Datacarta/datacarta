@@ -92,6 +92,29 @@ describe("validateGovernance", () => {
     expect(violations).toHaveLength(0);
   });
 
+  it("evaluates dotted-path conditions (modelingIntent.starRole)", () => {
+    const g = graphWithRules({
+      columnRequirements: {
+        requiredColumns: {
+          mart: [
+            {
+              role: "surrogateKey",
+              when: { field: "modelingIntent.starRole", operator: "eq", value: "fact" },
+            },
+          ],
+        },
+      },
+    });
+    // m2 is a fact in mart with a surrogate key — should pass
+    const violations = validateGovernance(g);
+    expect(violations.filter((v) => v.modelId === "m2")).toHaveLength(0);
+
+    // Remove the surrogate key flag — should now fail
+    g.models[1].columns[0].isSurrogateKey = false;
+    const violations2 = validateGovernance(g);
+    expect(violations2.filter((v) => v.modelId === "m2").length).toBeGreaterThan(0);
+  });
+
   it("flags data type violations", () => {
     const g = graphWithRules({
       dataTypes: {

@@ -1,11 +1,12 @@
-import type {
-  DatacartaGraph,
-  GovernanceRuleSet,
-  GovernanceViolation,
-  LayerType,
-  Model,
-  LayerDefinition,
-  RequiredColumn,
+import {
+  LAYER_TYPES as IMPORTED_LAYER_TYPES,
+  type DatacartaGraph,
+  type GovernanceRuleSet,
+  type GovernanceViolation,
+  type LayerType,
+  type Model,
+  type LayerDefinition,
+  type RequiredColumn,
 } from "./types.js";
 
 /**
@@ -162,10 +163,7 @@ function keyMatchesModel(
   layer: LayerDefinition | undefined
 ): boolean {
   // First check if key is a LayerType
-  const LAYER_TYPES: LayerType[] = [
-    "source", "raw", "staging", "intermediate", "mart", "semantic", "consumption",
-  ];
-  if (LAYER_TYPES.includes(key as LayerType)) {
+  if (IMPORTED_LAYER_TYPES.includes(key as LayerType)) {
     return layer?.type === key;
   }
 
@@ -205,15 +203,20 @@ function columnHasRole(col: Model["columns"][number], role: string): boolean {
   }
 }
 
-/** Evaluates a RequiredColumnCondition against a model's fields. */
+/** Evaluates a RequiredColumnCondition against a model's fields (supports dotted paths). */
 function evaluateCondition(
   condition: NonNullable<RequiredColumn["when"]>,
   model: Model
 ): boolean {
-  const value = (model as unknown as Record<string, unknown>)[condition.field];
+  const parts = condition.field.split(".");
+  let current: unknown = model;
+  for (const part of parts) {
+    if (current == null || typeof current !== "object") return false;
+    current = (current as Record<string, unknown>)[part];
+  }
   switch (condition.operator) {
-    case "eq": return value === condition.value;
-    case "neq": return value !== condition.value;
+    case "eq": return current === condition.value;
+    case "neq": return current !== condition.value;
     default: return false;
   }
 }
