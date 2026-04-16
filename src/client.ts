@@ -5,24 +5,46 @@
  * Re-assign constants so CommonJS emit uses plain `exports.X = …` (Rollup-friendly).
  */
 export type {
-  BaseEdge,
-  BaseNode,
   DatacartaGraph,
+  LayerDefinition,
+  LayerType,
+  Model,
+  Column,
+  ColumnRef,
+  LogicalType,
+  ModelEdge,
   EdgeType,
-  Grain,
-  GrainExample,
-  NodeType,
-  Status,
+  Metric,
+  DataMart,
+  JoinPath,
+  JoinKey,
+  ModelBlueprint,
+  SourceRef,
+  Transformation,
+  ModelingIntent,
+  SourceClassification,
+  PhysicalLocation,
+  Owner,
+  Team,
   TrustLevel,
+  Status,
+  GovernanceRuleSet,
+  GovernanceTemplate,
+  GovernanceViolation,
   ValidationResult,
 } from "./types.js";
+
 import * as T from "./types.js";
 
-export const NODE_TYPES = T.NODE_TYPES;
+export const LAYER_TYPES = T.LAYER_TYPES;
 export const EDGE_TYPES = T.EDGE_TYPES;
 export const TRUST_LEVELS = T.TRUST_LEVELS;
 export const STATUSES = T.STATUSES;
-export const GRAIN_EXAMPLES = T.GRAIN_EXAMPLES;
+export const LOGICAL_TYPES = T.LOGICAL_TYPES;
+export const SOURCE_ORIGINS = T.SOURCE_ORIGINS;
+export const INGESTION_METHODS = T.INGESTION_METHODS;
+export const STAR_ROLES = T.STAR_ROLES;
+export const BLUEPRINT_STATUSES = T.BLUEPRINT_STATUSES;
 
 export * from "./context-package.js";
 export * from "./validate-browser.js";
