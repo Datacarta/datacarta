@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { validateDatacartaGraph, type DatacartaGraph } from "datacarta-spec/client";
 import { parseWorkspaceFile, serializeWorkspace } from "../../lib/persist";
+import { DEFAULT_LAYER_DEFINITIONS } from "../../lib/lineage";
 import { useWorkspaceStore } from "../../store/useWorkspaceStore";
 
 function emptyGraph(): DatacartaGraph {
@@ -8,7 +9,10 @@ function emptyGraph(): DatacartaGraph {
     specVersion: "0.2.0",
     projectId: `proj-${Date.now().toString(36)}`,
     projectName: "New Workspace",
-    layerDefinitions: [],
+    // Seed with the canonical seven-layer set so "pick a layer" dropdowns (in
+    // Blueprints, ingest flows, etc.) are usable from the first moment. Users
+    // can customize under Settings → Layers if they need a different taxonomy.
+    layerDefinitions: DEFAULT_LAYER_DEFINITIONS.map((l) => ({ ...l })),
     models: [],
     edges: [],
     metrics: [],

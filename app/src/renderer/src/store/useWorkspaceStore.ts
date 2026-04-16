@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { DatacartaGraph, Model, ModelBlueprint, Column, ModelEdge, EdgeType, Metric } from "datacarta-spec/client";
+import type { DatacartaGraph, Model, ModelBlueprint, Column, ModelEdge, EdgeType, Metric, LayerDefinition } from "datacarta-spec/client";
 import { LAYER_TYPES, type LayerType } from "datacarta-spec/client";
 import { scanColumns } from "../lib/metric-scan";
 
@@ -29,6 +29,20 @@ interface WorkspaceState {
   zoomToModel: (modelId: string) => void;
   zoomOut: () => void;
   toggleTheme: () => void;
+  // Layer CRUD (customize per project)
+  addLayer: (layer: LayerDefinition) => void;
+  updateLayer: (id: string, patch: Partial<LayerDefinition>) => void;
+  /**
+   * Delete a layer. Refuses and returns an error string when models or
+   * blueprints still reference it — we'd rather surface the reassignment to
+   * the user than orphan their nodes.
+   */
+  deleteLayer: (id: string) => { ok: true } | { ok: false; error: string };
+  /**
+   * Move a layer up (-1) or down (+1) in the ordering. Swaps `order` with the
+   * neighbor so the two changes stay internally consistent.
+   */
+  moveLayer: (id: string, direction: -1 | 1) => void;
   // Blueprint CRUD
   addBlueprint: (bp: ModelBlueprint) => void;
   updateBlueprint: (id: string, patch: Partial<ModelBlueprint>) => void;
@@ -120,6 +134,53 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     localStorage.setItem("datacarta-theme", next);
     applyThemeToDOM(next);
     set({ theme: next });
+  },
+  // Layer CRUD
+  addLayer: (layer) => {
+    const g = get().graph;
+    if (!g) return;
+    if (g.layerDefinitions.some((l) => l.id === layer.id)) return;
+    const next = [...g.layerDefinitions, layer].sort((a, b) => a.order - b.order);
+    set({ graph: { ...g, layerDefinitions: next } });
+  },
+  updateLayer: (id, patch) => {
+    const g = get().graph;
+    if (!g) return;
+    const next = g.layerDefinitions
+      .map((l) => (l.id === id ? { ...l, ...patch } : l))
+      .sort((a, b) => a.order - b.order);
+    set({ graph: { ...g, layerDefinitions: next } });
+  },
+  deleteLayer: (id) => {
+    const g = get().graph;
+    if (!g) return { ok: false, error: "No workspace open." };
+    const modelCount = g.models.filter((m) => m.layerId === id).length;
+    const blueprintCount = g.blueprints.filter((b) => b.layerId === id).length;
+    if (modelCount + blueprintCount > 0) {
+      return {
+        ok: false,
+        error: `Layer is still referenced by ${modelCount} model${modelCount === 1 ? "" : "s"} and ${blueprintCount} blueprint${blueprintCount === 1 ? "" : "s"}. Reassign them first.`,
+      };
+    }
+    set({ graph: { ...g, layerDefinitions: g.layerDefinitions.filter((l) => l.id !== id) } });
+    return { ok: true };
+  },
+  moveLayer: (id, direction) => {
+    const g = get().graph;
+    if (!g) return;
+    const sorted = [...g.layerDefinitions].sort((a, b) => a.order - b.order);
+    const idx = sorted.findIndex((l) => l.id === id);
+    if (idx === -1) return;
+    const swapIdx = idx + direction;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const a = sorted[idx];
+    const b = sorted[swapIdx];
+    const next = sorted.map((l) => {
+      if (l.id === a.id) return { ...l, order: b.order };
+      if (l.id === b.id) return { ...l, order: a.order };
+      return l;
+    });
+    set({ graph: { ...g, layerDefinitions: next.sort((x, y) => x.order - y.order) } });
   },
   // Blueprint CRUD
   addBlueprint: (bp) => {

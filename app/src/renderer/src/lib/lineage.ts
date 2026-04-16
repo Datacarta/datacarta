@@ -1,4 +1,4 @@
-import type { DatacartaGraph, EdgeType } from "datacarta-spec/client";
+import type { DatacartaGraph, EdgeType, LayerDefinition, LayerType } from "datacarta-spec/client";
 
 export interface Adjacency {
   /** sourceId -> [targetId, ...] */
@@ -114,3 +114,24 @@ export const LAYER_ORDER: Record<string, number> = {
   semantic: 5,
   consumption: 6,
 };
+
+/**
+ * Canonical seven-layer set, matching the Harmonic Audio sample. These are the
+ * defaults we hand a brand-new empty project so every "pick a layer" dropdown
+ * is immediately useful. Users can rename / reorder / delete / extend these in
+ * Settings → Layers.
+ */
+export const DEFAULT_LAYER_DEFINITIONS: LayerDefinition[] = [
+  { id: "layer-source", name: "Source", type: "source", order: 0 },
+  { id: "layer-raw", name: "Raw", type: "raw", order: 1 },
+  { id: "layer-staging", name: "Staging", type: "staging", order: 2 },
+  { id: "layer-intermediate", name: "Intermediate", type: "intermediate", order: 3 },
+  { id: "layer-mart", name: "Mart", type: "mart", order: 4 },
+  { id: "layer-semantic", name: "Semantic", type: "semantic", order: 5 },
+  { id: "layer-consumption", name: "Consumption", type: "consumption", order: 6 },
+];
+
+/** Human-friendly default name for a given canonical layer type. */
+export function defaultLayerNameFor(type: LayerType): string {
+  return type.charAt(0).toUpperCase() + type.slice(1);
+}
