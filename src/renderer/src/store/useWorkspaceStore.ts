@@ -1,75 +1,78 @@
 import { create } from "zustand";
-import type { DatacartaGraph } from "datacarta-spec/client";
-import { NODE_TYPES, type NodeType } from "datacarta-spec/client";
-import type { ModelBlueprint } from "../types/project";
+import type { DatacartaGraph, ModelBlueprint } from "datacarta-spec/client";
+import { LAYER_TYPES, type LayerType } from "datacarta-spec/client";
 
-export type AppView = "projects" | "graph" | "nodes" | "blueprints" | "imports" | "export" | "settings";
+export type AppView = "projects" | "data-layer" | "models" | "metrics" | "blueprints" | "governance" | "imports" | "export" | "settings";
 
 interface WorkspaceState {
   activeView: AppView;
   graph: DatacartaGraph | null;
-  blueprints: ModelBlueprint[];
   projectFilename: string | null;
-  selectedNodeId: string | null;
-  nodeTypeFilter: Set<NodeType> | null;
+  selectedModelId: string | null;
+  layerFilter: Set<LayerType> | null;
   search: string;
   lastError: string | null;
+  zoomLevel: 1 | 2 | 3;
+  zoomLayerId: string | null;
+  zoomModelId: string | null;
   setActiveView: (v: AppView) => void;
-  /** Replace workspace; clears blueprints unless provided. */
-  openWorkspace: (graph: DatacartaGraph, filename?: string | null, blueprints?: ModelBlueprint[]) => void;
-  setSelectedNodeId: (id: string | null) => void;
-  toggleNodeType: (t: NodeType) => void;
-  clearNodeTypeFilter: () => void;
+  openWorkspace: (graph: DatacartaGraph, filename?: string | null) => void;
+  setSelectedModelId: (id: string | null) => void;
+  toggleLayerType: (t: LayerType) => void;
+  clearLayerFilter: () => void;
   setSearch: (s: string) => void;
   setLastError: (e: string | null) => void;
-  addBlueprint: (b: ModelBlueprint) => void;
-  updateBlueprint: (id: string, patch: Partial<ModelBlueprint>) => void;
-  removeBlueprint: (id: string) => void;
+  zoomToLayer: (layerId: string) => void;
+  zoomToModel: (modelId: string) => void;
+  zoomOut: () => void;
 }
 
-export const ALL_NODE_TYPES: NodeType[] = [...NODE_TYPES];
+export const ALL_LAYER_TYPES: LayerType[] = [...LAYER_TYPES];
 
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
-  activeView: "graph",
+  activeView: "data-layer",
   graph: null,
-  blueprints: [],
   projectFilename: null,
-  selectedNodeId: null,
-  nodeTypeFilter: null,
+  selectedModelId: null,
+  layerFilter: null,
   search: "",
   lastError: null,
+  zoomLevel: 1,
+  zoomLayerId: null,
+  zoomModelId: null,
   setActiveView: (v) => set({ activeView: v }),
-  openWorkspace: (graph, filename, blueprints) =>
+  openWorkspace: (graph, filename) =>
     set({
       graph,
       projectFilename: filename !== undefined ? filename : get().projectFilename,
-      blueprints: blueprints !== undefined ? blueprints : [],
-      selectedNodeId: null,
+      selectedModelId: null,
+      zoomLevel: 1,
+      zoomLayerId: null,
+      zoomModelId: null,
     }),
-  setSelectedNodeId: (id) => set({ selectedNodeId: id }),
-  toggleNodeType: (t) => {
-    const cur = get().nodeTypeFilter;
+  setSelectedModelId: (id) => set({ selectedModelId: id }),
+  toggleLayerType: (t) => {
+    const cur = get().layerFilter;
     if (!cur) {
-      const next = new Set<NodeType>(ALL_NODE_TYPES);
+      const next = new Set<LayerType>(ALL_LAYER_TYPES);
       next.delete(t);
-      set({ nodeTypeFilter: next });
+      set({ layerFilter: next });
       return;
     }
     const next = new Set(cur);
     if (next.has(t)) next.delete(t);
     else next.add(t);
-    if (next.size === ALL_NODE_TYPES.length) set({ nodeTypeFilter: null });
-    else set({ nodeTypeFilter: next });
+    if (next.size === ALL_LAYER_TYPES.length) set({ layerFilter: null });
+    else set({ layerFilter: next });
   },
-  clearNodeTypeFilter: () => set({ nodeTypeFilter: null }),
+  clearLayerFilter: () => set({ layerFilter: null }),
   setSearch: (s) => set({ search: s }),
   setLastError: (e) => set({ lastError: e }),
-  addBlueprint: (b) => set({ blueprints: [...get().blueprints, b] }),
-  updateBlueprint: (id, patch) =>
-    set({
-      blueprints: get().blueprints.map((x) =>
-        x.id === id ? { ...x, ...patch, updatedAt: new Date().toISOString() } : x
-      ),
-    }),
-  removeBlueprint: (id) => set({ blueprints: get().blueprints.filter((x) => x.id !== id) }),
+  zoomToLayer: (layerId) => set({ zoomLevel: 2, zoomLayerId: layerId, zoomModelId: null }),
+  zoomToModel: (modelId) => set({ zoomLevel: 3, zoomModelId: modelId }),
+  zoomOut: () => {
+    const level = get().zoomLevel;
+    if (level === 3) set({ zoomLevel: 2, zoomModelId: null });
+    else if (level === 2) set({ zoomLevel: 1, zoomLayerId: null });
+  },
 }));

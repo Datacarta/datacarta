@@ -1,26 +1,19 @@
-import type { DatacartaGraph } from "datacarta-spec/client";
+import type { DatacartaGraph, ModelBlueprint } from "datacarta-spec/client";
 import { validateDatacartaGraph } from "datacarta-spec/client";
-import type { DesktopProjectFile, ModelBlueprint } from "../types/project";
+import type { DesktopProjectFile } from "../types/project";
 
 export interface ParsedWorkspace {
   graph: DatacartaGraph;
-  blueprints: ModelBlueprint[];
 }
 
-export function serializeWorkspace(graph: DatacartaGraph, blueprints: ModelBlueprint[]): string {
+export function serializeWorkspace(graph: DatacartaGraph): string {
   const doc: DesktopProjectFile = {
     kind: "datacarta-desktop-project",
-    version: 2,
+    version: 3,
     savedAt: new Date().toISOString(),
     graph,
-    blueprints,
   };
   return JSON.stringify(doc, null, 2);
-}
-
-/** @deprecated use serializeWorkspace */
-export function serializeProject(graph: DatacartaGraph): string {
-  return serializeWorkspace(graph, []);
 }
 
 export function parseWorkspaceFile(text: string): ParsedWorkspace {
@@ -31,19 +24,15 @@ export function parseWorkspaceFile(text: string): ParsedWorkspace {
     if (!res.ok) {
       throw new Error(res.errors.join("\n"));
     }
-    return {
-      graph: doc.graph as DatacartaGraph,
-      blueprints: Array.isArray(doc.blueprints) ? doc.blueprints : [],
-    };
+    return { graph: doc.graph as DatacartaGraph };
   }
   const res = validateDatacartaGraph(raw);
   if (!res.ok) {
     throw new Error(res.errors.join("\n"));
   }
-  return { graph: raw as DatacartaGraph, blueprints: [] };
+  return { graph: raw as DatacartaGraph };
 }
 
-/** Import bare graph JSON (no wrapper). */
 export function parseProjectFile(text: string): DatacartaGraph {
   return parseWorkspaceFile(text).graph;
 }

@@ -1,33 +1,43 @@
 import type { Edge as RFEdge, Node as RFNode } from "@xyflow/react";
-import type { DatacartaGraph, NodeType } from "datacarta-spec/client";
-import { NODE_TYPES } from "datacarta-spec/client";
+import type { DatacartaGraph, LayerType } from "datacarta-spec/client";
 import { formatModelingHeadline } from "./modeling-metadata";
 
-const typeIndex = new Map<NodeType, number>(NODE_TYPES.map((t, i) => [t, i]));
+/** Layer type → visual order for layout */
+const LAYER_ORDER: Record<LayerType, number> = {
+  source: 0,
+  raw: 1,
+  staging: 2,
+  intermediate: 3,
+  mart: 4,
+  semantic: 5,
+  consumption: 6,
+};
 
 function layout(graph: DatacartaGraph): Map<string, { x: number; y: number }> {
-  const groups = new Map<NodeType, typeof graph.nodes>();
-  for (const n of graph.nodes) {
-    const arr = groups.get(n.type) ?? [];
-    arr.push(n);
-    groups.set(n.type, arr);
+  const pos = new Map<string, { x: number; y: number }>();
+  const layerIndex = new Map(graph.layerDefinitions.map((l) => [l.id, l]));
+
+  // Group models by layer
+  const groups = new Map<string, typeof graph.models>();
+  for (const m of graph.models) {
+    const arr = groups.get(m.layerId) ?? [];
+    arr.push(m);
+    groups.set(m.layerId, arr);
   }
 
-  const pos = new Map<string, { x: number; y: number }>();
   const rowHeight = 160;
   const colWidth = 280;
 
-  const orderedTypes = [...NODE_TYPES].sort(
-    (a, b) => (typeIndex.get(a) ?? 0) - (typeIndex.get(b) ?? 0)
-  );
+  // Sort layers by order
+  const orderedLayers = [...graph.layerDefinitions].sort((a, b) => a.order - b.order);
 
   let row = 0;
-  for (const t of orderedTypes) {
-    const list = groups.get(t);
-    if (!list?.length) continue;
+  for (const layer of orderedLayers) {
+    const models = groups.get(layer.id);
+    if (!models?.length) continue;
     let col = 0;
-    for (const n of list) {
-      pos.set(n.id, { x: col * colWidth, y: row * rowHeight });
+    for (const m of models) {
+      pos.set(m.id, { x: col * colWidth, y: row * rowHeight });
       col += 1;
     }
     row += 1;
@@ -37,30 +47,38 @@ function layout(graph: DatacartaGraph): Map<string, { x: number; y: number }> {
 
 export function graphToFlowElements(
   graph: DatacartaGraph,
-  opts: { filter: Set<NodeType> | null; search: string }
+  opts: { filter: Set<LayerType> | null; search: string }
 ): { nodes: RFNode[]; edges: RFEdge[] } {
   const q = opts.search.trim().toLowerCase();
-  const nodesIn = graph.nodes.filter((n) => {
-    if (opts.filter && !opts.filter.has(n.type)) return false;
+  const layerIndex = new Map(graph.layerDefinitions.map((l) => [l.id, l]));
+
+  const modelsIn = graph.models.filter((m) => {
+    const layer = layerIndex.get(m.layerId);
+    if (opts.filter && layer && !opts.filter.has(layer.type)) return false;
     if (!q) return true;
-    const hay = `${n.name} ${n.displayName ?? ""} ${(n.tags ?? []).join(" ")} ${formatModelingHeadline(n) ?? ""}`.toLowerCase();
+    const headline = formatModelingHeadline(m) ?? "";
+    const hay = `${m.name} ${m.displayName ?? ""} ${(m.tags ?? []).join(" ")} ${headline}`.toLowerCase();
     return hay.includes(q);
   });
-  const ids = new Set(nodesIn.map((n) => n.id));
-  const pos = layout({ ...graph, nodes: graph.nodes });
 
-  const nodes: RFNode[] = nodesIn.map((n) => {
-    const p = pos.get(n.id) ?? { x: 0, y: 0 };
-    const roleLine = formatModelingHeadline(n);
+  const ids = new Set(modelsIn.map((m) => m.id));
+  const pos = layout(graph);
+
+  const nodes: RFNode[] = modelsIn.map((m) => {
+    const p = pos.get(m.id) ?? { x: 0, y: 0 };
+    const layer = layerIndex.get(m.layerId);
+    const roleLine = formatModelingHeadline(m);
     return {
-      id: n.id,
+      id: m.id,
       type: "datacarta",
       position: p,
       data: {
-        label: n.displayName ?? n.name,
-        sublabel: n.type,
+        label: m.displayName ?? m.name,
+        sublabel: layer?.name ?? m.layerId,
         roleLine,
-        trust: n.trustLevel ?? "unknown",
+        trust: m.trustLevel,
+        layerType: layer?.type ?? "source",
+        columnCount: m.columns.length,
       },
     };
   });
@@ -72,7 +90,7 @@ export function graphToFlowElements(
       source: e.sourceId,
       target: e.targetId,
       label: e.type,
-      animated: e.type === "feeds" || e.type === "upstream_of",
+      animated: e.type === "depends_on",
       style: { stroke: "#64748b", strokeWidth: 1.25 },
       labelStyle: { fill: "#cbd5e1", fontSize: 10 },
       labelBgStyle: { fill: "#0f172a", fillOpacity: 0.85 },
