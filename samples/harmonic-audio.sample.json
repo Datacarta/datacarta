@@ -2,68 +2,55 @@
   "specVersion": "0.2.0",
   "projectId": "harmonic-audio-analytics",
   "projectName": "Harmonic Audio — Fan Engagement Analytics",
-  "projectDescription": "Fictional streaming audio company: maps ingestion, dbt-style models, metrics, and dashboards.",
-  "domains": ["growth", "finance"],
+  "projectDescription": "Fictional streaming audio company. Five source systems (frontend events, backend app DB, third-party SaaS) feed three product domains — growth, marketing, finance — through a full staging/intermediate/mart pipeline with metrics and dashboards.",
+  "domains": ["growth", "marketing", "finance"],
   "layerDefinitions": [
-    {
-      "id": "layer-source",
-      "name": "Source",
-      "type": "source",
-      "order": 0
-    },
-    {
-      "id": "layer-raw",
-      "name": "Raw",
-      "type": "raw",
-      "order": 1
-    },
-    {
-      "id": "layer-staging",
-      "name": "Staging",
-      "type": "staging",
-      "order": 2
-    },
-    {
-      "id": "layer-intermediate",
-      "name": "Intermediate",
-      "type": "intermediate",
-      "order": 3
-    },
-    {
-      "id": "layer-mart",
-      "name": "Mart",
-      "type": "mart",
-      "order": 4,
-      "domains": ["growth", "finance"]
-    },
-    {
-      "id": "layer-semantic",
-      "name": "Semantic",
-      "type": "semantic",
-      "order": 5
-    },
-    {
-      "id": "layer-consumption",
-      "name": "Consumption",
-      "type": "consumption",
-      "order": 6
-    }
+    { "id": "layer-source", "name": "Source", "type": "source", "order": 0 },
+    { "id": "layer-raw", "name": "Raw", "type": "raw", "order": 1 },
+    { "id": "layer-staging", "name": "Staging", "type": "staging", "order": 2 },
+    { "id": "layer-intermediate", "name": "Intermediate", "type": "intermediate", "order": 3 },
+    { "id": "layer-mart", "name": "Mart", "type": "mart", "order": 4, "domains": ["growth", "marketing", "finance"] },
+    { "id": "layer-semantic", "name": "Semantic", "type": "semantic", "order": 5 },
+    { "id": "layer-consumption", "name": "Consumption", "type": "consumption", "order": 6 }
   ],
   "models": [
     {
       "id": "src-snowplow",
       "layerId": "layer-source",
       "name": "snowplow",
-      "displayName": "Snowplow (events)",
+      "displayName": "Snowplow (web + mobile events)",
       "description": "Frontend behavioral event stream for web and mobile clients.",
       "columns": [],
-      "sourceClassification": {
-        "origin": "frontend",
-        "ingestionMethod": "event_stream"
-      },
+      "sourceClassification": { "origin": "frontend", "ingestionMethod": "event_stream" },
       "trustLevel": "trusted",
       "status": "active",
       "ownerId": "owner-maya-chen",
+      "teamId": "team-data-platform"
+    },
+    {
+      "id": "src-segment",
+      "layerId": "layer-source",
+      "name": "segment",
+      "displayName": "Segment (marketing events)",
+      "description": "Frontend CDP — marketing-instrumented events (signup, play, upgrade prompts).",
+      "columns": [],
+      "sourceClassification": { "origin": "frontend", "ingestionMethod": "event_stream" },
+      "trustLevel": "reviewed",
+      "status": "active",
+      "ownerId": "owner-priya-rao",
+      "teamId": "team-marketing-eng"
+    },
+    {
+      "id": "src-app-postgres",
+      "layerId": "layer-source",
+      "name": "app_postgres",
+      "displayName": "App DB (Postgres CDC)",
+      "description": "Primary transactional database for fans, artists, and playlists. Ingested via change-data-capture.",
+      "columns": [],
+      "sourceClassification": { "origin": "backend", "ingestionMethod": "cdc" },
+      "trustLevel": "trusted",
+      "status": "active",
+      "ownerId": "owner-dan-ortiz",
       "teamId": "team-data-platform"
     },
     {
@@ -71,17 +58,28 @@
       "layerId": "layer-source",
       "name": "stripe",
       "displayName": "Stripe Billing",
-      "description": "Third-party billing provider for subscriptions and invoices.",
+      "description": "Third-party billing provider for subscriptions, invoices, and dunning.",
       "columns": [],
-      "sourceClassification": {
-        "origin": "third_party",
-        "ingestionMethod": "batch_api"
-      },
+      "sourceClassification": { "origin": "third_party", "ingestionMethod": "batch_api" },
       "trustLevel": "trusted",
       "status": "active",
       "ownerId": "owner-maya-chen",
       "teamId": "team-data-platform"
     },
+    {
+      "id": "src-hubspot",
+      "layerId": "layer-source",
+      "name": "hubspot",
+      "displayName": "HubSpot CRM",
+      "description": "Third-party CRM — contacts, lead-to-customer stages, campaign metadata.",
+      "columns": [],
+      "sourceClassification": { "origin": "third_party", "ingestionMethod": "batch_api" },
+      "trustLevel": "reviewed",
+      "status": "active",
+      "ownerId": "owner-priya-rao",
+      "teamId": "team-marketing-eng"
+    },
+
     {
       "id": "raw-snowplow-events",
       "layerId": "layer-raw",
@@ -90,46 +88,53 @@
       "description": "Append-only landing table for Snowplow enriched events.",
       "grain": "event",
       "columns": [
-        {
-          "id": "raw-snowplow-events-event-id",
-          "name": "event_id",
-          "dataType": "varchar(64)",
-          "logicalType": "string",
-          "description": "Snowplow event UUID",
-          "isPrimaryKey": true
-        },
-        {
-          "id": "raw-snowplow-events-event-ts",
-          "name": "event_ts",
-          "dataType": "timestamp_tz",
-          "logicalType": "timestamp",
-          "description": "Collector timestamp"
-        },
-        {
-          "id": "raw-snowplow-events-user-id",
-          "name": "user_id",
-          "dataType": "varchar(64)",
-          "logicalType": "string",
-          "description": "Hashed fan id"
-        },
-        {
-          "id": "raw-snowplow-events-artist-id",
-          "name": "artist_id",
-          "dataType": "varchar(64)",
-          "logicalType": "string",
-          "description": "Artist dimension key"
-        },
-        {
-          "id": "raw-snowplow-events-event-name",
-          "name": "event_name",
-          "dataType": "varchar(128)",
-          "logicalType": "string",
-          "description": "Self-describing event name"
-        }
+        { "id": "raw-snowplow-events-event-id", "name": "event_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Snowplow event UUID", "isPrimaryKey": true },
+        { "id": "raw-snowplow-events-event-ts", "name": "event_ts", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "Collector timestamp" },
+        { "id": "raw-snowplow-events-user-id", "name": "user_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Hashed fan id" },
+        { "id": "raw-snowplow-events-artist-id", "name": "artist_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Artist dimension key" },
+        { "id": "raw-snowplow-events-event-name", "name": "event_name", "dataType": "varchar(128)", "logicalType": "string", "description": "Self-describing event name" }
       ],
       "trustLevel": "reviewed",
       "status": "active",
       "ownerId": "owner-maya-chen",
+      "teamId": "team-data-platform"
+    },
+    {
+      "id": "raw-segment-track",
+      "layerId": "layer-raw",
+      "name": "raw_segment_track",
+      "displayName": "Raw Segment Track",
+      "description": "Landing table for Segment track-call payloads.",
+      "grain": "event",
+      "columns": [
+        { "id": "raw-seg-track-event-id", "name": "event_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Segment message id", "isPrimaryKey": true },
+        { "id": "raw-seg-track-user-id", "name": "user_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Segment user id" },
+        { "id": "raw-seg-track-event", "name": "event", "dataType": "varchar(128)", "logicalType": "string", "description": "Event name" },
+        { "id": "raw-seg-track-properties", "name": "properties", "dataType": "variant", "logicalType": "json", "description": "Event properties blob" },
+        { "id": "raw-seg-track-received-at", "name": "received_at", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "Ingestion timestamp" }
+      ],
+      "trustLevel": "reviewed",
+      "status": "active",
+      "ownerId": "owner-priya-rao",
+      "teamId": "team-marketing-eng"
+    },
+    {
+      "id": "raw-app-users",
+      "layerId": "layer-raw",
+      "name": "raw_app_users",
+      "displayName": "Raw App Users (CDC)",
+      "description": "CDC mirror of the users table from the application Postgres database.",
+      "grain": "user_id",
+      "columns": [
+        { "id": "raw-app-users-user-id", "name": "user_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Fan account identifier", "isPrimaryKey": true },
+        { "id": "raw-app-users-email", "name": "email", "dataType": "varchar(256)", "logicalType": "string", "description": "Contact email (hashed)" },
+        { "id": "raw-app-users-display-name", "name": "display_name", "dataType": "varchar(256)", "logicalType": "string", "description": "User display name" },
+        { "id": "raw-app-users-signup-ts", "name": "signup_ts", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "Account creation timestamp" },
+        { "id": "raw-app-users-country", "name": "country", "dataType": "varchar(2)", "logicalType": "string", "description": "ISO-3166 country code" }
+      ],
+      "trustLevel": "reviewed",
+      "status": "active",
+      "ownerId": "owner-dan-ortiz",
       "teamId": "team-data-platform"
     },
     {
@@ -140,48 +145,38 @@
       "description": "Landing table for Stripe subscription records.",
       "grain": "subscription_id",
       "columns": [
-        {
-          "id": "raw-stripe-subs-subscription-id",
-          "name": "subscription_id",
-          "dataType": "varchar(64)",
-          "logicalType": "string",
-          "description": "Stripe subscription UUID",
-          "isPrimaryKey": true
-        },
-        {
-          "id": "raw-stripe-subs-user-id",
-          "name": "user_id",
-          "dataType": "varchar(64)",
-          "logicalType": "string",
-          "description": "Fan account identifier"
-        },
-        {
-          "id": "raw-stripe-subs-plan-name",
-          "name": "plan_name",
-          "dataType": "varchar(128)",
-          "logicalType": "string",
-          "description": "Subscription plan name"
-        },
-        {
-          "id": "raw-stripe-subs-status",
-          "name": "status",
-          "dataType": "varchar(32)",
-          "logicalType": "string",
-          "description": "Stripe subscription status"
-        },
-        {
-          "id": "raw-stripe-subs-created-at",
-          "name": "created_at",
-          "dataType": "timestamp_tz",
-          "logicalType": "timestamp",
-          "description": "Subscription creation timestamp"
-        }
+        { "id": "raw-stripe-subs-subscription-id", "name": "subscription_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Stripe subscription UUID", "isPrimaryKey": true },
+        { "id": "raw-stripe-subs-user-id", "name": "user_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Fan account identifier" },
+        { "id": "raw-stripe-subs-plan-name", "name": "plan_name", "dataType": "varchar(128)", "logicalType": "string", "description": "Subscription plan name" },
+        { "id": "raw-stripe-subs-status", "name": "status", "dataType": "varchar(32)", "logicalType": "string", "description": "Stripe subscription status" },
+        { "id": "raw-stripe-subs-mrr", "name": "mrr_cents", "dataType": "integer", "logicalType": "integer", "description": "Monthly recurring revenue in cents" },
+        { "id": "raw-stripe-subs-created-at", "name": "created_at", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "Subscription creation timestamp" }
       ],
       "trustLevel": "reviewed",
       "status": "active",
       "ownerId": "owner-maya-chen",
       "teamId": "team-data-platform"
     },
+    {
+      "id": "raw-hubspot-contacts",
+      "layerId": "layer-raw",
+      "name": "raw_hubspot_contacts",
+      "displayName": "Raw HubSpot Contacts",
+      "description": "Landing table for HubSpot contact records including lifecycle stage and campaign attribution.",
+      "grain": "hubspot_contact_id",
+      "columns": [
+        { "id": "raw-hs-contact-id", "name": "contact_id", "dataType": "varchar(64)", "logicalType": "string", "description": "HubSpot contact id", "isPrimaryKey": true },
+        { "id": "raw-hs-email", "name": "email", "dataType": "varchar(256)", "logicalType": "string", "description": "Contact email" },
+        { "id": "raw-hs-lifecycle-stage", "name": "lifecycle_stage", "dataType": "varchar(64)", "logicalType": "string", "description": "Lead lifecycle stage" },
+        { "id": "raw-hs-first-campaign", "name": "first_campaign_id", "dataType": "varchar(64)", "logicalType": "string", "description": "First-touch campaign id" },
+        { "id": "raw-hs-created-ts", "name": "created_ts", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "Contact creation timestamp" }
+      ],
+      "trustLevel": "draft",
+      "status": "active",
+      "ownerId": "owner-priya-rao",
+      "teamId": "team-marketing-eng"
+    },
+
     {
       "id": "stg-snowplow-events-clean",
       "layerId": "layer-staging",
@@ -190,49 +185,73 @@
       "description": "Typed columns, bot filtering, PII hashing.",
       "grain": "event",
       "columns": [
-        {
-          "id": "stg-events-clean-event-id",
-          "name": "event_id",
-          "dataType": "varchar(64)",
-          "logicalType": "string",
-          "description": "Snowplow event UUID",
-          "isPrimaryKey": true
-        },
-        {
-          "id": "stg-events-clean-event-ts",
-          "name": "event_ts",
-          "dataType": "timestamp_tz",
-          "logicalType": "timestamp",
-          "description": "Collector timestamp"
-        },
-        {
-          "id": "stg-events-clean-user-id",
-          "name": "user_id",
-          "dataType": "varchar(64)",
-          "logicalType": "string",
-          "description": "Hashed fan id"
-        },
-        {
-          "id": "stg-events-clean-artist-id",
-          "name": "artist_id",
-          "dataType": "varchar(64)",
-          "logicalType": "string",
-          "description": "Artist dimension key"
-        },
-        {
-          "id": "stg-events-clean-event-name",
-          "name": "event_name",
-          "dataType": "varchar(128)",
-          "logicalType": "string",
-          "description": "Self-describing event name"
-        },
-        {
-          "id": "stg-events-clean-is-bot",
-          "name": "is_bot",
-          "dataType": "boolean",
-          "logicalType": "boolean",
-          "description": "Heuristic bot filter flag"
-        }
+        { "id": "stg-events-clean-event-id", "name": "event_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Snowplow event UUID", "isPrimaryKey": true },
+        { "id": "stg-events-clean-event-ts", "name": "event_ts", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "Collector timestamp" },
+        { "id": "stg-events-clean-user-id", "name": "user_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Hashed fan id" },
+        { "id": "stg-events-clean-artist-id", "name": "artist_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Artist dimension key" },
+        { "id": "stg-events-clean-event-name", "name": "event_name", "dataType": "varchar(128)", "logicalType": "string", "description": "Self-describing event name" },
+        { "id": "stg-events-clean-is-bot", "name": "is_bot", "dataType": "boolean", "logicalType": "boolean", "description": "Heuristic bot filter flag" }
+      ],
+      "sql": "-- stg_snowplow_events_clean\nSELECT\n  event_id,\n  event_ts,\n  SHA2(user_id, 256) AS user_id,\n  artist_id,\n  event_name,\n  user_agent ILIKE '%bot%' AS is_bot\nFROM {{ ref('raw_snowplow_events') }}\nWHERE event_ts >= DATEADD(day, -30, CURRENT_DATE)",
+      "sqlDialect": "snowflake",
+      "trustLevel": "reviewed",
+      "status": "active",
+      "ownerId": "owner-maya-chen",
+      "teamId": "team-data-platform"
+    },
+    {
+      "id": "stg-segment-track-clean",
+      "layerId": "layer-staging",
+      "name": "stg_segment_track_clean",
+      "displayName": "Stg — Clean Segment Track",
+      "description": "Unnests Segment properties into typed columns used by marketing models.",
+      "grain": "event",
+      "columns": [
+        { "id": "stg-seg-event-id", "name": "event_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Segment message id", "isPrimaryKey": true },
+        { "id": "stg-seg-user-id", "name": "user_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Segment user id (hashed)" },
+        { "id": "stg-seg-event", "name": "event", "dataType": "varchar(128)", "logicalType": "string", "description": "Event name" },
+        { "id": "stg-seg-campaign-id", "name": "campaign_id", "dataType": "varchar(64)", "logicalType": "string", "description": "UTM campaign id extracted from properties" },
+        { "id": "stg-seg-event-ts", "name": "event_ts", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "Canonical event timestamp" }
+      ],
+      "sql": "-- stg_segment_track_clean\nSELECT\n  event_id,\n  SHA2(user_id, 256) AS user_id,\n  event,\n  properties:utm_campaign::varchar AS campaign_id,\n  COALESCE(properties:timestamp::timestamp_tz, received_at) AS event_ts\nFROM {{ ref('raw_segment_track') }}",
+      "sqlDialect": "snowflake",
+      "trustLevel": "reviewed",
+      "status": "active",
+      "ownerId": "owner-priya-rao",
+      "teamId": "team-marketing-eng"
+    },
+    {
+      "id": "stg-app-users",
+      "layerId": "layer-staging",
+      "name": "stg_app_users",
+      "displayName": "Stg — App Users",
+      "description": "Deduped, PII-hashed current snapshot of application users.",
+      "grain": "user_id",
+      "columns": [
+        { "id": "stg-app-users-user-id", "name": "user_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Fan account identifier", "isPrimaryKey": true, "isNaturalKey": true },
+        { "id": "stg-app-users-email-hash", "name": "email_hash", "dataType": "varchar(64)", "logicalType": "string", "description": "SHA-256 hashed email (for cross-source join)" },
+        { "id": "stg-app-users-signup-ts", "name": "signup_ts", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "Account creation timestamp" },
+        { "id": "stg-app-users-country", "name": "country", "dataType": "varchar(2)", "logicalType": "string", "description": "ISO-3166 country code" }
+      ],
+      "trustLevel": "reviewed",
+      "status": "active",
+      "ownerId": "owner-dan-ortiz",
+      "teamId": "team-data-platform"
+    },
+    {
+      "id": "stg-stripe-subscriptions",
+      "layerId": "layer-staging",
+      "name": "stg_stripe_subscriptions",
+      "displayName": "Stg — Stripe Subscriptions",
+      "description": "Typed, latest-status view of Stripe subscriptions.",
+      "grain": "subscription_id",
+      "columns": [
+        { "id": "stg-stripe-subscription-id", "name": "subscription_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Stripe subscription id", "isPrimaryKey": true },
+        { "id": "stg-stripe-user-id", "name": "user_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Fan account identifier" },
+        { "id": "stg-stripe-plan-name", "name": "plan_name", "dataType": "varchar(128)", "logicalType": "string", "description": "Plan name" },
+        { "id": "stg-stripe-status", "name": "status", "dataType": "varchar(32)", "logicalType": "string", "description": "Current subscription status" },
+        { "id": "stg-stripe-mrr", "name": "mrr_usd", "dataType": "number(18,2)", "logicalType": "float", "description": "Monthly recurring revenue in USD" },
+        { "id": "stg-stripe-started", "name": "started_at", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "Subscription start" }
       ],
       "trustLevel": "reviewed",
       "status": "active",
@@ -240,50 +259,108 @@
       "teamId": "team-data-platform"
     },
     {
+      "id": "stg-hubspot-contacts",
+      "layerId": "layer-staging",
+      "name": "stg_hubspot_contacts",
+      "displayName": "Stg — HubSpot Contacts",
+      "description": "HubSpot contacts keyed by hashed email to join with the app-users staging table.",
+      "grain": "hubspot_contact_id",
+      "columns": [
+        { "id": "stg-hs-contact-id", "name": "contact_id", "dataType": "varchar(64)", "logicalType": "string", "description": "HubSpot contact id", "isPrimaryKey": true },
+        { "id": "stg-hs-email-hash", "name": "email_hash", "dataType": "varchar(64)", "logicalType": "string", "description": "SHA-256 hashed email" },
+        { "id": "stg-hs-lifecycle-stage", "name": "lifecycle_stage", "dataType": "varchar(64)", "logicalType": "string", "description": "Lifecycle stage" },
+        { "id": "stg-hs-first-campaign", "name": "first_campaign_id", "dataType": "varchar(64)", "logicalType": "string", "description": "First-touch campaign id" }
+      ],
+      "trustLevel": "draft",
+      "status": "active",
+      "ownerId": "owner-priya-rao",
+      "teamId": "team-marketing-eng"
+    },
+
+    {
+      "id": "int-user-profile",
+      "layerId": "layer-intermediate",
+      "name": "int_user_profile",
+      "displayName": "User Profile (core join)",
+      "description": "Canonical cross-source user profile — links app users to their HubSpot contact via email hash. Reused across domains.",
+      "grain": "user_id",
+      "columns": [
+        { "id": "int-up-user-id", "name": "user_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Fan account identifier", "isPrimaryKey": true, "isNaturalKey": true },
+        { "id": "int-up-hubspot-contact", "name": "hubspot_contact_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Matched HubSpot contact id (nullable)" },
+        { "id": "int-up-signup-ts", "name": "signup_ts", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "Account creation timestamp" },
+        { "id": "int-up-country", "name": "country", "dataType": "varchar(2)", "logicalType": "string", "description": "ISO country" },
+        { "id": "int-up-first-campaign", "name": "first_campaign_id", "dataType": "varchar(64)", "logicalType": "string", "description": "First-touch marketing campaign" }
+      ],
+      "trustLevel": "reviewed",
+      "status": "active",
+      "ownerId": "owner-dan-ortiz",
+      "teamId": "team-data-platform",
+      "usageHints": ["Do not filter on country here — consumers should filter in their own mart."]
+    },
+    {
       "id": "int-user-day-listening",
       "layerId": "layer-intermediate",
+      "domain": "growth",
       "name": "int_user_day_listening",
       "displayName": "User-Day Listening Sessions",
-      "description": "Rolls events into bounded listening sessions per user-day.",
+      "description": "Rolls events into bounded listening sessions per user-day. Growth-domain-owned — gates all engagement metrics.",
       "grain": "user_day",
       "columns": [
-        {
-          "id": "int-udl-user-sk",
-          "name": "user_sk",
-          "dataType": "number(38,0)",
-          "logicalType": "integer",
-          "description": "Surrogate key for the fan dimension",
-          "isForeignKey": true
-        },
-        {
-          "id": "int-udl-listening-date",
-          "name": "listening_date",
-          "dataType": "date",
-          "logicalType": "date",
-          "description": "Calendar date of listening activity",
-          "isPrimaryKey": true
-        },
-        {
-          "id": "int-udl-minutes-listened",
-          "name": "minutes_listened",
-          "dataType": "float",
-          "logicalType": "float",
-          "description": "Total minutes listened on this date"
-        },
-        {
-          "id": "int-udl-session-count",
-          "name": "session_count",
-          "dataType": "integer",
-          "logicalType": "integer",
-          "description": "Number of listening sessions on this date"
-        }
+        { "id": "int-udl-user-sk", "name": "user_sk", "dataType": "number(38,0)", "logicalType": "integer", "description": "Surrogate key for the fan dimension", "isForeignKey": true },
+        { "id": "int-udl-listening-date", "name": "listening_date", "dataType": "date", "logicalType": "date", "description": "Calendar date of listening activity", "isPrimaryKey": true },
+        { "id": "int-udl-minutes-listened", "name": "minutes_listened", "dataType": "float", "logicalType": "float", "description": "Total minutes listened on this date" },
+        { "id": "int-udl-session-count", "name": "session_count", "dataType": "integer", "logicalType": "integer", "description": "Number of listening sessions on this date" }
       ],
+      "sql": "-- int_user_day_listening\nSELECT\n  user_id::number AS user_sk,\n  DATE(event_ts)  AS listening_date,\n  SUM(duration_seconds) / 60.0 AS minutes_listened,\n  COUNT(DISTINCT session_id) AS session_count\nFROM {{ ref('stg_snowplow_events_clean') }}\nWHERE event_name = 'play' AND NOT is_bot\nGROUP BY 1, 2",
+      "sqlDialect": "snowflake",
       "caveats": ["Sessions split at 30 minutes of inactivity; mobile background audio may overcount."],
       "trustLevel": "reviewed",
       "status": "active",
       "ownerId": "owner-maya-chen",
       "teamId": "team-data-platform"
     },
+    {
+      "id": "int-marketing-touchpoints",
+      "layerId": "layer-intermediate",
+      "domain": "marketing",
+      "name": "int_marketing_touchpoints",
+      "displayName": "Marketing Touchpoints",
+      "description": "Deduped user ↔ campaign touchpoints built from Segment events + HubSpot first-touch attribution.",
+      "grain": "user_touchpoint",
+      "columns": [
+        { "id": "int-mt-touchpoint-id", "name": "touchpoint_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Synthetic touchpoint id", "isPrimaryKey": true, "isSurrogateKey": true },
+        { "id": "int-mt-user-id", "name": "user_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Fan account id" },
+        { "id": "int-mt-campaign-id", "name": "campaign_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Campaign id" },
+        { "id": "int-mt-channel", "name": "channel", "dataType": "varchar(32)", "logicalType": "string", "description": "Attribution channel (email, paid_social, organic, …)" },
+        { "id": "int-mt-touched-at", "name": "touched_at", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "Touchpoint timestamp" }
+      ],
+      "trustLevel": "draft",
+      "status": "active",
+      "ownerId": "owner-priya-rao",
+      "teamId": "team-marketing-eng"
+    },
+    {
+      "id": "int-subscription-events",
+      "layerId": "layer-intermediate",
+      "domain": "finance",
+      "name": "int_subscription_events",
+      "displayName": "Subscription Events",
+      "description": "Canonical event stream of subscription state transitions (created, upgraded, paused, churned).",
+      "grain": "subscription_event",
+      "columns": [
+        { "id": "int-se-event-id", "name": "event_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Synthetic subscription event id", "isPrimaryKey": true, "isSurrogateKey": true },
+        { "id": "int-se-subscription-id", "name": "subscription_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Stripe subscription id" },
+        { "id": "int-se-user-id", "name": "user_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Fan account id" },
+        { "id": "int-se-event-type", "name": "event_type", "dataType": "varchar(32)", "logicalType": "string", "description": "created | upgraded | paused | churned" },
+        { "id": "int-se-mrr-delta", "name": "mrr_delta_usd", "dataType": "number(18,2)", "logicalType": "float", "description": "Change in MRR contributed by this event" },
+        { "id": "int-se-event-ts", "name": "event_ts", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "Event timestamp" }
+      ],
+      "trustLevel": "reviewed",
+      "status": "active",
+      "ownerId": "owner-maya-chen",
+      "teamId": "team-data-platform"
+    },
+
     {
       "id": "fct-fan-artist-week-affinity",
       "layerId": "layer-mart",
@@ -293,55 +370,15 @@
       "description": "Weekly affinity scores between fans and artists.",
       "grain": "fan_artist_week",
       "columns": [
-        {
-          "id": "fct-fawa-affinity-sk",
-          "name": "affinity_sk",
-          "dataType": "number(38,0)",
-          "logicalType": "integer",
-          "description": "Surrogate primary key",
-          "isPrimaryKey": true,
-          "isSurrogateKey": true
-        },
-        {
-          "id": "fct-fawa-fan-sk",
-          "name": "fan_sk",
-          "dataType": "number(38,0)",
-          "logicalType": "integer",
-          "description": "Foreign key to dim_fan",
-          "isForeignKey": true,
-          "foreignKeyTarget": { "modelId": "dim-fan", "columnId": "dim-fan-fan-sk" }
-        },
-        {
-          "id": "fct-fawa-artist-sk",
-          "name": "artist_sk",
-          "dataType": "number(38,0)",
-          "logicalType": "integer",
-          "description": "Foreign key to dim_artist",
-          "isForeignKey": true,
-          "foreignKeyTarget": { "modelId": "dim-artist", "columnId": "dim-artist-artist-sk" }
-        },
-        {
-          "id": "fct-fawa-week-start",
-          "name": "week_start",
-          "dataType": "date",
-          "logicalType": "date",
-          "description": "Monday date of the ISO week"
-        },
-        {
-          "id": "fct-fawa-affinity-score",
-          "name": "affinity_score",
-          "dataType": "float",
-          "logicalType": "float",
-          "description": "Computed fan-artist affinity score (0–1)"
-        },
-        {
-          "id": "fct-fawa-minutes-listened",
-          "name": "minutes_listened",
-          "dataType": "float",
-          "logicalType": "float",
-          "description": "Total minutes the fan listened to this artist in the week"
-        }
+        { "id": "fct-fawa-affinity-sk", "name": "affinity_sk", "dataType": "number(38,0)", "logicalType": "integer", "description": "Surrogate primary key", "isPrimaryKey": true, "isSurrogateKey": true },
+        { "id": "fct-fawa-fan-sk", "name": "fan_sk", "dataType": "number(38,0)", "logicalType": "integer", "description": "Foreign key to dim_fan", "isForeignKey": true, "foreignKeyTarget": { "modelId": "dim-fan", "columnId": "dim-fan-fan-sk" } },
+        { "id": "fct-fawa-artist-sk", "name": "artist_sk", "dataType": "number(38,0)", "logicalType": "integer", "description": "Foreign key to dim_artist", "isForeignKey": true, "foreignKeyTarget": { "modelId": "dim-artist", "columnId": "dim-artist-artist-sk" } },
+        { "id": "fct-fawa-week-start", "name": "week_start", "dataType": "date", "logicalType": "date", "description": "Monday date of the ISO week" },
+        { "id": "fct-fawa-affinity-score", "name": "affinity_score", "dataType": "float", "logicalType": "float", "description": "Computed fan-artist affinity score (0–1)" },
+        { "id": "fct-fawa-minutes-listened", "name": "minutes_listened", "dataType": "float", "logicalType": "float", "description": "Total minutes the fan listened to this artist in the week" }
       ],
+      "sql": "-- fct_fan_artist_week_affinity\nSELECT\n  {{ dbt_utils.generate_surrogate_key(['user_sk','artist_sk','week_start']) }} AS affinity_sk,\n  user_sk AS fan_sk,\n  artist_sk,\n  DATE_TRUNC('week', listening_date) AS week_start,\n  LOG(1 + SUM(minutes_listened)) / 10.0 AS affinity_score,\n  SUM(minutes_listened) AS minutes_listened\nFROM {{ ref('int_user_day_listening') }}\nGROUP BY 2, 3, 4",
+      "sqlDialect": "snowflake",
       "modelingIntent": { "starRole": "fact" },
       "trustLevel": "trusted",
       "status": "active",
@@ -358,61 +395,13 @@
       "description": "Slowly changing dimension for fan/listener accounts.",
       "grain": "fan_sk",
       "columns": [
-        {
-          "id": "dim-fan-fan-sk",
-          "name": "fan_sk",
-          "dataType": "number(38,0)",
-          "logicalType": "integer",
-          "description": "Surrogate primary key",
-          "isPrimaryKey": true,
-          "isSurrogateKey": true
-        },
-        {
-          "id": "dim-fan-user-id",
-          "name": "user_id",
-          "dataType": "varchar(64)",
-          "logicalType": "string",
-          "description": "Natural key — hashed fan account id",
-          "isNaturalKey": true
-        },
-        {
-          "id": "dim-fan-display-name",
-          "name": "display_name",
-          "dataType": "varchar(256)",
-          "logicalType": "string",
-          "description": "Fan display name"
-        },
-        {
-          "id": "dim-fan-email",
-          "name": "email",
-          "dataType": "varchar(256)",
-          "logicalType": "string",
-          "description": "Fan email address (hashed)"
-        },
-        {
-          "id": "dim-fan-valid-from",
-          "name": "valid_from",
-          "dataType": "timestamp_tz",
-          "logicalType": "timestamp",
-          "description": "SCD2 row valid from",
-          "scdRole": "valid_from"
-        },
-        {
-          "id": "dim-fan-valid-to",
-          "name": "valid_to",
-          "dataType": "timestamp_tz",
-          "logicalType": "timestamp",
-          "description": "SCD2 row valid to (null = current)",
-          "scdRole": "valid_to"
-        },
-        {
-          "id": "dim-fan-is-current",
-          "name": "is_current",
-          "dataType": "boolean",
-          "logicalType": "boolean",
-          "description": "True if this is the current row",
-          "scdRole": "is_current"
-        }
+        { "id": "dim-fan-fan-sk", "name": "fan_sk", "dataType": "number(38,0)", "logicalType": "integer", "description": "Surrogate primary key", "isPrimaryKey": true, "isSurrogateKey": true },
+        { "id": "dim-fan-user-id", "name": "user_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Natural key — hashed fan account id", "isNaturalKey": true },
+        { "id": "dim-fan-display-name", "name": "display_name", "dataType": "varchar(256)", "logicalType": "string", "description": "Fan display name" },
+        { "id": "dim-fan-email", "name": "email", "dataType": "varchar(256)", "logicalType": "string", "description": "Fan email address (hashed)" },
+        { "id": "dim-fan-valid-from", "name": "valid_from", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "SCD2 row valid from", "scdRole": "valid_from" },
+        { "id": "dim-fan-valid-to", "name": "valid_to", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "SCD2 row valid to (null = current)", "scdRole": "valid_to" },
+        { "id": "dim-fan-is-current", "name": "is_current", "dataType": "boolean", "logicalType": "boolean", "description": "True if this is the current row", "scdRole": "is_current" }
       ],
       "modelingIntent": { "starRole": "dimension", "scdType": 2 },
       "trustLevel": "trusted",
@@ -429,67 +418,62 @@
       "description": "Slowly changing dimension for creator profiles.",
       "grain": "artist_sk",
       "columns": [
-        {
-          "id": "dim-artist-artist-sk",
-          "name": "artist_sk",
-          "dataType": "number(38,0)",
-          "logicalType": "integer",
-          "description": "Surrogate primary key",
-          "isPrimaryKey": true,
-          "isSurrogateKey": true
-        },
-        {
-          "id": "dim-artist-artist-id",
-          "name": "artist_id",
-          "dataType": "varchar(64)",
-          "logicalType": "string",
-          "description": "Natural key — artist platform id",
-          "isNaturalKey": true
-        },
-        {
-          "id": "dim-artist-display-name",
-          "name": "display_name",
-          "dataType": "varchar(256)",
-          "logicalType": "string",
-          "description": "Artist display name"
-        },
-        {
-          "id": "dim-artist-genre",
-          "name": "genre",
-          "dataType": "varchar(128)",
-          "logicalType": "string",
-          "description": "Primary genre of the artist"
-        },
-        {
-          "id": "dim-artist-valid-from",
-          "name": "valid_from",
-          "dataType": "timestamp_tz",
-          "logicalType": "timestamp",
-          "description": "SCD2 row valid from",
-          "scdRole": "valid_from"
-        },
-        {
-          "id": "dim-artist-valid-to",
-          "name": "valid_to",
-          "dataType": "timestamp_tz",
-          "logicalType": "timestamp",
-          "description": "SCD2 row valid to (null = current)",
-          "scdRole": "valid_to"
-        },
-        {
-          "id": "dim-artist-is-current",
-          "name": "is_current",
-          "dataType": "boolean",
-          "logicalType": "boolean",
-          "description": "True if this is the current row",
-          "scdRole": "is_current"
-        }
+        { "id": "dim-artist-artist-sk", "name": "artist_sk", "dataType": "number(38,0)", "logicalType": "integer", "description": "Surrogate primary key", "isPrimaryKey": true, "isSurrogateKey": true },
+        { "id": "dim-artist-artist-id", "name": "artist_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Natural key — artist platform id", "isNaturalKey": true },
+        { "id": "dim-artist-display-name", "name": "display_name", "dataType": "varchar(256)", "logicalType": "string", "description": "Artist display name" },
+        { "id": "dim-artist-genre", "name": "genre", "dataType": "varchar(128)", "logicalType": "string", "description": "Primary genre of the artist" },
+        { "id": "dim-artist-valid-from", "name": "valid_from", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "SCD2 row valid from", "scdRole": "valid_from" },
+        { "id": "dim-artist-valid-to", "name": "valid_to", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "SCD2 row valid to (null = current)", "scdRole": "valid_to" },
+        { "id": "dim-artist-is-current", "name": "is_current", "dataType": "boolean", "logicalType": "boolean", "description": "True if this is the current row", "scdRole": "is_current" }
       ],
       "modelingIntent": { "starRole": "dimension", "scdType": 2 },
       "trustLevel": "trusted",
       "status": "active",
       "ownerId": "owner-maya-chen",
       "teamId": "team-data-platform"
+    },
+    {
+      "id": "dim-campaign",
+      "layerId": "layer-mart",
+      "domain": "marketing",
+      "name": "dim_campaign",
+      "displayName": "Campaign Dimension",
+      "description": "HubSpot + paid-ads campaigns keyed on campaign_id.",
+      "grain": "campaign_sk",
+      "columns": [
+        { "id": "dim-camp-campaign-sk", "name": "campaign_sk", "dataType": "number(38,0)", "logicalType": "integer", "description": "Surrogate primary key", "isPrimaryKey": true, "isSurrogateKey": true },
+        { "id": "dim-camp-campaign-id", "name": "campaign_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Natural key — campaign id", "isNaturalKey": true },
+        { "id": "dim-camp-name", "name": "campaign_name", "dataType": "varchar(256)", "logicalType": "string", "description": "Campaign display name" },
+        { "id": "dim-camp-channel", "name": "channel", "dataType": "varchar(32)", "logicalType": "string", "description": "Acquisition channel" },
+        { "id": "dim-camp-spend-usd", "name": "total_spend_usd", "dataType": "number(18,2)", "logicalType": "float", "description": "Total spend to date" }
+      ],
+      "modelingIntent": { "starRole": "dimension" },
+      "trustLevel": "draft",
+      "status": "active",
+      "ownerId": "owner-priya-rao",
+      "teamId": "team-marketing-eng"
+    },
+    {
+      "id": "fct-marketing-attribution",
+      "layerId": "layer-mart",
+      "domain": "marketing",
+      "name": "fct_marketing_attribution",
+      "displayName": "Marketing Attribution Fact",
+      "description": "Fan-level marketing attribution — connects first-touch campaign to subsequent conversion events and downstream revenue.",
+      "grain": "user_campaign",
+      "columns": [
+        { "id": "fct-ma-attribution-sk", "name": "attribution_sk", "dataType": "number(38,0)", "logicalType": "integer", "description": "Surrogate primary key", "isPrimaryKey": true, "isSurrogateKey": true },
+        { "id": "fct-ma-fan-sk", "name": "fan_sk", "dataType": "number(38,0)", "logicalType": "integer", "description": "Foreign key to dim_fan", "isForeignKey": true, "foreignKeyTarget": { "modelId": "dim-fan", "columnId": "dim-fan-fan-sk" } },
+        { "id": "fct-ma-campaign-sk", "name": "campaign_sk", "dataType": "number(38,0)", "logicalType": "integer", "description": "Foreign key to dim_campaign", "isForeignKey": true, "foreignKeyTarget": { "modelId": "dim-campaign", "columnId": "dim-camp-campaign-sk" } },
+        { "id": "fct-ma-touched-at", "name": "touched_at", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "First-touch timestamp" },
+        { "id": "fct-ma-converted-at", "name": "converted_at", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "Timestamp of paid conversion (null if not converted)" },
+        { "id": "fct-ma-attributed-mrr", "name": "attributed_mrr_usd", "dataType": "number(18,2)", "logicalType": "float", "description": "MRR attributed to this first-touch campaign" }
+      ],
+      "modelingIntent": { "starRole": "fact" },
+      "trustLevel": "draft",
+      "status": "active",
+      "ownerId": "owner-priya-rao",
+      "teamId": "team-marketing-eng"
     },
     {
       "id": "fct-subscriber-health",
@@ -500,37 +484,10 @@
       "description": "Per-user subscription health fact for finance reporting.",
       "grain": "user_id",
       "columns": [
-        {
-          "id": "fct-sh-user-sk",
-          "name": "user_sk",
-          "dataType": "number(38,0)",
-          "logicalType": "integer",
-          "description": "Surrogate primary key and FK to dim_fan",
-          "isPrimaryKey": true,
-          "isForeignKey": true,
-          "foreignKeyTarget": { "modelId": "dim-fan", "columnId": "dim-fan-fan-sk" }
-        },
-        {
-          "id": "fct-sh-dunning-stage",
-          "name": "dunning_stage",
-          "dataType": "varchar(32)",
-          "logicalType": "string",
-          "description": "Current dunning stage for failed payment recovery"
-        },
-        {
-          "id": "fct-sh-mrr",
-          "name": "mrr",
-          "dataType": "number(18,2)",
-          "logicalType": "float",
-          "description": "Monthly recurring revenue for this subscriber"
-        },
-        {
-          "id": "fct-sh-churn-risk-score",
-          "name": "churn_risk_score",
-          "dataType": "float",
-          "logicalType": "float",
-          "description": "Heuristic churn risk score (0–100)"
-        }
+        { "id": "fct-sh-user-sk", "name": "user_sk", "dataType": "number(38,0)", "logicalType": "integer", "description": "Surrogate primary key and FK to dim_fan", "isPrimaryKey": true, "isForeignKey": true, "foreignKeyTarget": { "modelId": "dim-fan", "columnId": "dim-fan-fan-sk" } },
+        { "id": "fct-sh-dunning-stage", "name": "dunning_stage", "dataType": "varchar(32)", "logicalType": "string", "description": "Current dunning stage for failed payment recovery" },
+        { "id": "fct-sh-mrr", "name": "mrr", "dataType": "number(18,2)", "logicalType": "float", "description": "Monthly recurring revenue for this subscriber" },
+        { "id": "fct-sh-churn-risk-score", "name": "churn_risk_score", "dataType": "float", "logicalType": "float", "description": "Heuristic churn risk score (0–100)" }
       ],
       "modelingIntent": { "starRole": "fact" },
       "trustLevel": "trusted",
@@ -539,39 +496,25 @@
       "teamId": "team-data-platform"
     },
     {
-      "id": "growth-pulse-dashboard",
-      "layerId": "layer-consumption",
-      "name": "growth_pulse_dashboard",
-      "displayName": "Growth Pulse Dashboard",
-      "description": "Looker dashboard surfacing north-star growth KPIs for leadership reviews.",
+      "id": "fct-weekly-revenue",
+      "layerId": "layer-mart",
+      "domain": "finance",
+      "name": "fct_weekly_revenue",
+      "displayName": "Weekly Revenue",
+      "description": "Weekly revenue aggregated from subscription events — the source of the MRR headline metric.",
+      "grain": "week",
       "columns": [
-        {
-          "id": "dash-gp-waf",
-          "name": "weekly_active_fans",
-          "dataType": "integer",
-          "logicalType": "integer",
-          "description": "Weekly Active Fans KPI tile"
-        },
-        {
-          "id": "dash-gp-affinity-trend",
-          "name": "affinity_trend",
-          "dataType": "float",
-          "logicalType": "float",
-          "description": "Week-over-week affinity score trend"
-        },
-        {
-          "id": "dash-gp-top-artists",
-          "name": "top_artists_by_affinity",
-          "dataType": "string",
-          "logicalType": "string",
-          "description": "Ranked list of top artists by fan affinity score"
-        }
+        { "id": "fct-wr-week-start", "name": "week_start", "dataType": "date", "logicalType": "date", "description": "Monday of the ISO week", "isPrimaryKey": true },
+        { "id": "fct-wr-new-mrr", "name": "new_mrr_usd", "dataType": "number(18,2)", "logicalType": "float", "description": "MRR added from new subscribers" },
+        { "id": "fct-wr-expansion-mrr", "name": "expansion_mrr_usd", "dataType": "number(18,2)", "logicalType": "float", "description": "MRR added from upgrades" },
+        { "id": "fct-wr-churned-mrr", "name": "churned_mrr_usd", "dataType": "number(18,2)", "logicalType": "float", "description": "MRR lost to churn" },
+        { "id": "fct-wr-net-mrr", "name": "net_mrr_usd", "dataType": "number(18,2)", "logicalType": "float", "description": "Net new MRR for the week" }
       ],
+      "modelingIntent": { "starRole": "fact" },
       "trustLevel": "reviewed",
       "status": "active",
       "ownerId": "owner-maya-chen",
-      "teamId": "team-data-platform",
-      "tags": ["looker", "exec"]
+      "teamId": "team-data-platform"
     },
     {
       "id": "legacy-mart-listens-daily",
@@ -585,86 +528,101 @@
       "status": "deprecated",
       "ownerId": "owner-maya-chen",
       "tags": ["deprecated"]
+    },
+
+    {
+      "id": "growth-pulse-dashboard",
+      "layerId": "layer-consumption",
+      "name": "growth_pulse_dashboard",
+      "displayName": "Growth Pulse Dashboard",
+      "description": "Looker dashboard surfacing north-star growth KPIs for leadership reviews.",
+      "columns": [
+        { "id": "dash-gp-waf", "name": "weekly_active_fans", "dataType": "integer", "logicalType": "integer", "description": "Weekly Active Fans KPI tile" },
+        { "id": "dash-gp-affinity-trend", "name": "affinity_trend", "dataType": "float", "logicalType": "float", "description": "Week-over-week affinity score trend" },
+        { "id": "dash-gp-top-artists", "name": "top_artists_by_affinity", "dataType": "string", "logicalType": "string", "description": "Ranked list of top artists by fan affinity score" }
+      ],
+      "trustLevel": "reviewed",
+      "status": "active",
+      "ownerId": "owner-maya-chen",
+      "teamId": "team-data-platform",
+      "tags": ["looker", "exec"]
+    },
+    {
+      "id": "marketing-attribution-report",
+      "layerId": "layer-consumption",
+      "name": "marketing_attribution_report",
+      "displayName": "Marketing Attribution Report",
+      "description": "Mode notebook surfacing CAC and attribution-by-channel for the marketing team.",
+      "columns": [
+        { "id": "dash-ma-cac", "name": "blended_cac_usd", "dataType": "float", "logicalType": "float", "description": "Blended customer acquisition cost" },
+        { "id": "dash-ma-by-channel", "name": "cac_by_channel", "dataType": "string", "logicalType": "string", "description": "CAC broken out by channel" }
+      ],
+      "trustLevel": "draft",
+      "status": "active",
+      "ownerId": "owner-priya-rao",
+      "teamId": "team-marketing-eng",
+      "tags": ["mode", "marketing"]
+    },
+    {
+      "id": "finance-mrr-snapshot",
+      "layerId": "layer-consumption",
+      "name": "finance_mrr_snapshot",
+      "displayName": "Finance MRR Snapshot",
+      "description": "Weekly MRR snapshot emailed to the CFO every Monday.",
+      "columns": [
+        { "id": "dash-fin-mrr", "name": "total_mrr_usd", "dataType": "float", "logicalType": "float", "description": "Total MRR" },
+        { "id": "dash-fin-net-new", "name": "net_new_mrr_usd", "dataType": "float", "logicalType": "float", "description": "Net-new MRR for the week" }
+      ],
+      "trustLevel": "reviewed",
+      "status": "active",
+      "ownerId": "owner-maya-chen",
+      "teamId": "team-data-platform",
+      "tags": ["finance", "email-report"]
     }
   ],
   "edges": [
-    {
-      "id": "e-snowplow-maps-to-raw-events",
-      "type": "maps_to",
-      "sourceId": "src-snowplow",
-      "targetId": "raw-snowplow-events",
-      "description": "Snowplow loader lands events into raw warehouse schema."
-    },
-    {
-      "id": "e-stripe-maps-to-raw-subs",
-      "type": "maps_to",
-      "sourceId": "src-stripe",
-      "targetId": "raw-stripe-subscriptions",
-      "description": "Stripe batch API loads subscription records into raw schema."
-    },
-    {
-      "id": "e-raw-events-depends-stg",
-      "type": "depends_on",
-      "sourceId": "stg-snowplow-events-clean",
-      "targetId": "raw-snowplow-events",
-      "description": "Staging model depends on raw Snowplow events."
-    },
-    {
-      "id": "e-stg-depends-int-listening",
-      "type": "depends_on",
-      "sourceId": "int-user-day-listening",
-      "targetId": "stg-snowplow-events-clean",
-      "description": "Intermediate listening model depends on clean staging events."
-    },
-    {
-      "id": "e-int-depends-fct-affinity",
-      "type": "depends_on",
-      "sourceId": "fct-fan-artist-week-affinity",
-      "targetId": "int-user-day-listening",
-      "description": "Fan-artist affinity fact depends on user-day listening intermediate."
-    },
-    {
-      "id": "e-raw-subs-depends-fct-health",
-      "type": "depends_on",
-      "sourceId": "fct-subscriber-health",
-      "targetId": "raw-stripe-subscriptions",
-      "description": "Subscriber health fact depends on raw Stripe subscriptions."
-    },
-    {
-      "id": "e-fct-affinity-defines-waf",
-      "type": "defines",
-      "sourceId": "fct-fan-artist-week-affinity",
-      "targetId": "met-waf",
-      "description": "Weekly active fans metric is computed from the fan-artist affinity fact."
-    },
-    {
-      "id": "e-fct-health-defines-churn",
-      "type": "defines",
-      "sourceId": "fct-subscriber-health",
-      "targetId": "met-churn-risk",
-      "description": "Churn risk metric is derived from subscriber health fact."
-    },
-    {
-      "id": "e-waf-powers-dashboard",
-      "type": "powers",
-      "sourceId": "met-waf",
-      "targetId": "growth-pulse-dashboard",
-      "description": "WAF metric powers the Growth Pulse dashboard."
-    },
-    {
-      "id": "e-fct-affinity-joins-dim-fan",
-      "type": "joins_with",
-      "sourceId": "fct-fan-artist-week-affinity",
-      "targetId": "dim-fan",
-      "description": "Fact joins to fan dimension on fan_sk."
-    },
-    {
-      "id": "e-fct-affinity-joins-dim-artist",
-      "type": "joins_with",
-      "sourceId": "fct-fan-artist-week-affinity",
-      "targetId": "dim-artist",
-      "description": "Fact joins to artist dimension on artist_sk."
-    }
+    { "id": "e-snowplow-to-raw-events", "type": "maps_to", "sourceId": "src-snowplow", "targetId": "raw-snowplow-events", "description": "Snowplow loader lands events into raw." },
+    { "id": "e-segment-to-raw-track", "type": "maps_to", "sourceId": "src-segment", "targetId": "raw-segment-track", "description": "Segment webhook lands track calls into raw." },
+    { "id": "e-stripe-to-raw-subs", "type": "maps_to", "sourceId": "src-stripe", "targetId": "raw-stripe-subscriptions", "description": "Stripe batch API loads subscription records into raw." },
+    { "id": "e-hubspot-to-raw-contacts", "type": "maps_to", "sourceId": "src-hubspot", "targetId": "raw-hubspot-contacts", "description": "HubSpot batch API loads contacts into raw." },
+    { "id": "e-app-pg-to-raw-users", "type": "maps_to", "sourceId": "src-app-postgres", "targetId": "raw-app-users", "description": "App DB CDC mirrors users into raw." },
+
+    { "id": "e-raw-events-to-stg", "type": "depends_on", "sourceId": "stg-snowplow-events-clean", "targetId": "raw-snowplow-events", "description": "Staging cleans raw Snowplow events." },
+    { "id": "e-raw-track-to-stg", "type": "depends_on", "sourceId": "stg-segment-track-clean", "targetId": "raw-segment-track", "description": "Staging unnests Segment track payloads." },
+    { "id": "e-raw-users-to-stg", "type": "depends_on", "sourceId": "stg-app-users", "targetId": "raw-app-users", "description": "Staging dedupes app users." },
+    { "id": "e-raw-subs-to-stg", "type": "depends_on", "sourceId": "stg-stripe-subscriptions", "targetId": "raw-stripe-subscriptions", "description": "Staging types Stripe subscriptions." },
+    { "id": "e-raw-hs-to-stg", "type": "depends_on", "sourceId": "stg-hubspot-contacts", "targetId": "raw-hubspot-contacts", "description": "Staging typed HubSpot contacts." },
+
+    { "id": "e-stg-events-to-int-listening", "type": "depends_on", "sourceId": "int-user-day-listening", "targetId": "stg-snowplow-events-clean", "description": "Growth intermediate model built from clean events." },
+    { "id": "e-stg-users-to-int-profile", "type": "depends_on", "sourceId": "int-user-profile", "targetId": "stg-app-users", "description": "User profile joins app users…" },
+    { "id": "e-stg-hs-to-int-profile", "type": "depends_on", "sourceId": "int-user-profile", "targetId": "stg-hubspot-contacts", "description": "…with HubSpot contacts on hashed email." },
+    { "id": "e-stg-track-to-int-marketing", "type": "depends_on", "sourceId": "int-marketing-touchpoints", "targetId": "stg-segment-track-clean", "description": "Marketing touchpoints built from Segment events." },
+    { "id": "e-stg-hs-to-int-marketing", "type": "depends_on", "sourceId": "int-marketing-touchpoints", "targetId": "stg-hubspot-contacts", "description": "HubSpot first-touch campaign feeds marketing touchpoints." },
+    { "id": "e-stg-subs-to-int-sub-events", "type": "depends_on", "sourceId": "int-subscription-events", "targetId": "stg-stripe-subscriptions", "description": "Subscription state events derived from Stripe staging." },
+
+    { "id": "e-int-listening-to-fct-affinity", "type": "depends_on", "sourceId": "fct-fan-artist-week-affinity", "targetId": "int-user-day-listening", "description": "Affinity fact built on user-day listening." },
+    { "id": "e-int-profile-to-dim-fan", "type": "depends_on", "sourceId": "dim-fan", "targetId": "int-user-profile", "description": "Fan dimension reads canonical user profile." },
+    { "id": "e-int-marketing-to-fct-attr", "type": "depends_on", "sourceId": "fct-marketing-attribution", "targetId": "int-marketing-touchpoints", "description": "Marketing attribution fact built on touchpoints." },
+    { "id": "e-int-profile-to-fct-attr", "type": "depends_on", "sourceId": "fct-marketing-attribution", "targetId": "int-user-profile", "description": "Marketing attribution joins in user profile." },
+    { "id": "e-int-hs-to-dim-campaign", "type": "depends_on", "sourceId": "dim-campaign", "targetId": "stg-hubspot-contacts", "description": "Campaign dimension seeded from HubSpot metadata." },
+    { "id": "e-int-sub-to-fct-health", "type": "depends_on", "sourceId": "fct-subscriber-health", "targetId": "int-subscription-events", "description": "Subscriber health rolls up subscription events." },
+    { "id": "e-int-profile-to-fct-health", "type": "depends_on", "sourceId": "fct-subscriber-health", "targetId": "int-user-profile", "description": "Subscriber health joins user profile." },
+    { "id": "e-int-sub-to-fct-revenue", "type": "depends_on", "sourceId": "fct-weekly-revenue", "targetId": "int-subscription-events", "description": "Weekly revenue rolls up subscription events." },
+
+    { "id": "e-fct-affinity-defines-waf", "type": "defines", "sourceId": "fct-fan-artist-week-affinity", "targetId": "met-waf", "description": "WAF metric computed from affinity fact." },
+    { "id": "e-fct-health-defines-churn", "type": "defines", "sourceId": "fct-subscriber-health", "targetId": "met-churn-risk", "description": "Churn risk metric derived from subscriber health." },
+    { "id": "e-fct-revenue-defines-mrr", "type": "defines", "sourceId": "fct-weekly-revenue", "targetId": "met-mrr", "description": "MRR metric derived from weekly revenue." },
+    { "id": "e-fct-attr-defines-cac", "type": "defines", "sourceId": "fct-marketing-attribution", "targetId": "met-cac", "description": "CAC metric derived from marketing attribution." },
+
+    { "id": "e-waf-powers-dashboard", "type": "powers", "sourceId": "met-waf", "targetId": "growth-pulse-dashboard", "description": "WAF powers the Growth Pulse dashboard." },
+    { "id": "e-cac-powers-marketing-report", "type": "powers", "sourceId": "met-cac", "targetId": "marketing-attribution-report", "description": "CAC powers the marketing attribution report." },
+    { "id": "e-mrr-powers-finance-snapshot", "type": "powers", "sourceId": "met-mrr", "targetId": "finance-mrr-snapshot", "description": "MRR metric powers the finance MRR snapshot." },
+
+    { "id": "e-fct-affinity-joins-dim-fan", "type": "joins_with", "sourceId": "fct-fan-artist-week-affinity", "targetId": "dim-fan", "description": "Fact joins to fan dimension on fan_sk." },
+    { "id": "e-fct-affinity-joins-dim-artist", "type": "joins_with", "sourceId": "fct-fan-artist-week-affinity", "targetId": "dim-artist", "description": "Fact joins to artist dimension on artist_sk." },
+    { "id": "e-fct-attr-joins-dim-fan", "type": "joins_with", "sourceId": "fct-marketing-attribution", "targetId": "dim-fan", "description": "Attribution fact joins to fan dimension." },
+    { "id": "e-fct-attr-joins-dim-campaign", "type": "joins_with", "sourceId": "fct-marketing-attribution", "targetId": "dim-campaign", "description": "Attribution fact joins to campaign dimension." },
+    { "id": "e-fct-health-joins-dim-fan", "type": "joins_with", "sourceId": "fct-subscriber-health", "targetId": "dim-fan", "description": "Subscriber health joins to fan dimension." }
   ],
   "metrics": [
     {
@@ -685,6 +643,23 @@
       "tags": ["kpi", "north-star"]
     },
     {
+      "id": "met-mrr",
+      "name": "total_mrr_usd",
+      "displayName": "Total MRR (USD)",
+      "description": "Monthly recurring revenue — sum of active subscriptions' MRR in USD.",
+      "expression": "SUM(mrr)",
+      "aggregation": "sum",
+      "timeGrain": "weekly",
+      "sourceModelIds": ["fct-weekly-revenue"],
+      "domain": "finance",
+      "isKPI": true,
+      "ownerId": "owner-maya-chen",
+      "teamId": "team-data-platform",
+      "trustLevel": "trusted",
+      "status": "active",
+      "tags": ["kpi", "finance"]
+    },
+    {
       "id": "met-churn-risk",
       "name": "churn_risk_score",
       "displayName": "Churn Risk Score",
@@ -697,6 +672,22 @@
       "status": "draft",
       "tags": ["experimental"],
       "caveats": ["Draft model — do not use for finance reporting."]
+    },
+    {
+      "id": "met-cac",
+      "name": "blended_cac_usd",
+      "displayName": "Blended CAC (USD)",
+      "description": "Blended customer acquisition cost — marketing spend ÷ new paying fans.",
+      "expression": "SUM(total_spend_usd) / NULLIF(COUNT(DISTINCT fan_sk), 0)",
+      "aggregation": "avg",
+      "timeGrain": "monthly",
+      "sourceModelIds": ["fct-marketing-attribution"],
+      "domain": "marketing",
+      "ownerId": "owner-priya-rao",
+      "teamId": "team-marketing-eng",
+      "trustLevel": "draft",
+      "status": "draft",
+      "tags": ["cac", "marketing"]
     }
   ],
   "dataMarts": [
@@ -709,21 +700,26 @@
       "dimensionModelIds": ["dim-fan", "dim-artist"],
       "metricIds": ["met-waf"],
       "joinPaths": [
-        {
-          "fromModelId": "fct-fan-artist-week-affinity",
-          "toModelId": "dim-fan",
-          "joinKeys": [{ "fromColumn": "fan_sk", "toColumn": "fan_sk" }],
-          "joinType": "left"
-        },
-        {
-          "fromModelId": "fct-fan-artist-week-affinity",
-          "toModelId": "dim-artist",
-          "joinKeys": [{ "fromColumn": "artist_sk", "toColumn": "artist_sk" }],
-          "joinType": "left"
-        }
+        { "fromModelId": "fct-fan-artist-week-affinity", "toModelId": "dim-fan", "joinKeys": [{ "fromColumn": "fan_sk", "toColumn": "fan_sk" }], "joinType": "left" },
+        { "fromModelId": "fct-fan-artist-week-affinity", "toModelId": "dim-artist", "joinKeys": [{ "fromColumn": "artist_sk", "toColumn": "artist_sk" }], "joinType": "left" }
       ],
       "ownerId": "owner-maya-chen",
       "teamId": "team-data-platform"
+    },
+    {
+      "id": "dm-marketing",
+      "name": "marketing_mart",
+      "description": "Marketing attribution mart — fan × campaign with MRR attribution.",
+      "domain": "marketing",
+      "factModelIds": ["fct-marketing-attribution"],
+      "dimensionModelIds": ["dim-fan", "dim-campaign"],
+      "metricIds": ["met-cac"],
+      "joinPaths": [
+        { "fromModelId": "fct-marketing-attribution", "toModelId": "dim-fan", "joinKeys": [{ "fromColumn": "fan_sk", "toColumn": "fan_sk" }], "joinType": "left" },
+        { "fromModelId": "fct-marketing-attribution", "toModelId": "dim-campaign", "joinKeys": [{ "fromColumn": "campaign_sk", "toColumn": "campaign_sk" }], "joinType": "left" }
+      ],
+      "ownerId": "owner-priya-rao",
+      "teamId": "team-marketing-eng"
     }
   ],
   "blueprints": [
@@ -736,43 +732,14 @@
       "domain": "growth",
       "grain": "session_id",
       "columns": [
-        {
-          "id": "bp-ls-session-id",
-          "name": "session_id",
-          "dataType": "varchar(64)",
-          "logicalType": "string",
-          "description": "Unique session identifier",
-          "isPrimaryKey": true
-        },
-        {
-          "id": "bp-ls-user-sk",
-          "name": "user_sk",
-          "dataType": "number(38,0)",
-          "logicalType": "integer",
-          "description": "Foreign key to dim_fan",
-          "isForeignKey": true
-        },
-        {
-          "id": "bp-ls-session-start",
-          "name": "session_start_ts",
-          "dataType": "timestamp_tz",
-          "logicalType": "timestamp",
-          "description": "Session start timestamp"
-        },
-        {
-          "id": "bp-ls-session-duration",
-          "name": "session_duration_minutes",
-          "dataType": "float",
-          "logicalType": "float",
-          "description": "Total session duration in minutes"
-        }
+        { "id": "bp-ls-session-id", "name": "session_id", "dataType": "varchar(64)", "logicalType": "string", "description": "Unique session identifier", "isPrimaryKey": true },
+        { "id": "bp-ls-user-sk", "name": "user_sk", "dataType": "number(38,0)", "logicalType": "integer", "description": "Foreign key to dim_fan", "isForeignKey": true },
+        { "id": "bp-ls-session-start", "name": "session_start_ts", "dataType": "timestamp_tz", "logicalType": "timestamp", "description": "Session start timestamp" },
+        { "id": "bp-ls-session-duration", "name": "session_duration_minutes", "dataType": "float", "logicalType": "float", "description": "Total session duration in minutes" }
       ],
       "modelingIntent": { "starRole": "fact" },
       "sourceRefs": [
-        {
-          "modelId": "int-user-day-listening",
-          "columnsUsed": ["user_sk", "listening_date", "minutes_listened", "session_count"]
-        }
+        { "modelId": "int-user-day-listening", "columnsUsed": ["user_sk", "listening_date", "minutes_listened", "session_count"] }
       ],
       "status": "drafting",
       "trustLevel": "draft",
@@ -784,22 +751,13 @@
     }
   ],
   "owners": [
-    {
-      "id": "owner-maya-chen",
-      "name": "maya.chen",
-      "displayName": "Maya Chen",
-      "description": "Analytics engineering lead.",
-      "email": "maya.chen@harmonicaudio.com"
-    }
+    { "id": "owner-maya-chen", "name": "maya.chen", "displayName": "Maya Chen", "description": "Analytics engineering lead.", "email": "maya.chen@harmonicaudio.com" },
+    { "id": "owner-priya-rao", "name": "priya.rao", "displayName": "Priya Rao", "description": "Marketing analytics lead.", "email": "priya.rao@harmonicaudio.com" },
+    { "id": "owner-dan-ortiz", "name": "dan.ortiz", "displayName": "Dan Ortiz", "description": "Platform data engineer — CDC & app-DB mirroring.", "email": "dan.ortiz@harmonicaudio.com" }
   ],
   "teams": [
-    {
-      "id": "team-data-platform",
-      "name": "data_platform",
-      "displayName": "Data Platform",
-      "description": "Owns core pipelines and modeling standards.",
-      "slackChannel": "#data-platform"
-    }
+    { "id": "team-data-platform", "name": "data_platform", "displayName": "Data Platform", "description": "Owns core pipelines and modeling standards.", "slackChannel": "#data-platform" },
+    { "id": "team-marketing-eng", "name": "marketing_eng", "displayName": "Marketing Engineering", "description": "Owns Segment/HubSpot instrumentation and attribution models.", "slackChannel": "#marketing-eng" }
   ],
   "governanceTemplate": "kimball",
   "governanceRules": {
@@ -810,14 +768,8 @@
         "mart": "^(fct_|dim_)"
       },
       "columnPatterns": [
-        {
-          "pattern": "_sk$",
-          "description": "Surrogate keys must end with _sk"
-        },
-        {
-          "pattern": "_id$",
-          "description": "Natural and source keys must end with _id"
-        }
+        { "pattern": "_sk$", "description": "Surrogate keys must end with _sk" },
+        { "pattern": "_id$", "description": "Natural and source keys must end with _id" }
       ]
     }
   }
