@@ -1,0 +1,33 @@
+@import "@xyflow/react/dist/style.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* React Flow tweaks for dark canvas */
+.react-flow__background {
+  background-color: #0b0f14 !important;
+}
+
+.react-flow__controls {
+  background: #121922;
+  border: 1px solid #1f2a3a;
+  box-shadow: none;
+}
+
+.react-flow__controls-button {
+  background: #121922;
+  border-bottom: 1px solid #1f2a3a;
+  fill: #e2e8f0;
+}
+
+.react-flow__minimap {
+  background: #121922;
+  border: 1px solid #1f2a3a;
+}
