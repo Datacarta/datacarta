@@ -150,7 +150,9 @@
         "tags": {
           "type": "array",
           "items": { "type": "string" }
-        }
+        },
+        "isMetric": { "type": "boolean" },
+        "isKPI": { "type": "boolean" }
       }
     },
     "modelingIntent": {
@@ -221,6 +223,8 @@
         },
         "modelingIntent": { "$ref": "#/definitions/modelingIntent" },
         "sourceClassification": { "$ref": "#/definitions/sourceClassification" },
+        "sql": { "type": "string" },
+        "sqlDialect": { "type": "string" },
         "trustLevel": { "$ref": "#/definitions/trustLevel" },
         "status": { "$ref": "#/definitions/status" },
         "ownerId": { "type": "string" },
@@ -421,6 +425,8 @@
           "type": "array",
           "items": { "$ref": "#/definitions/sourceRef" }
         },
+        "sql": { "type": "string" },
+        "sqlDialect": { "type": "string" },
         "status": { "$ref": "#/definitions/blueprintStatus" },
         "linkedModelId": { "type": "string" },
         "trustLevel": { "$ref": "#/definitions/trustLevel" },

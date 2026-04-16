@@ -62,6 +62,10 @@ export interface Column {
   businessLogic?: string;
   sourceColumn?: ColumnRef;
   tags?: string[];
+  /** Column represents a measurable business metric (count, sum, revenue, etc.). */
+  isMetric?: boolean;
+  /** Metric column is promoted to a Key Performance Indicator. Only meaningful if isMetric is true. */
+  isKPI?: boolean;
 }
 
 // ── Source Classification ────────────────────────────────────────────
@@ -113,6 +117,14 @@ export interface Model {
   ownerId?: string;
   teamId?: string;
   physical?: PhysicalLocation;
+  /**
+   * SQL (or equivalent transformation) that produces this model. For source
+   * tables this is usually the DDL; for downstream models it's the SELECT
+   * that materializes the table.
+   */
+  sql?: string;
+  /** SQL dialect hint for editors, e.g. "snowflake", "databricks", "ansi". */
+  sqlDialect?: string;
   tags?: string[];
   usageHints?: string[];
   caveats?: string[];
@@ -203,6 +215,9 @@ export interface ModelBlueprint {
   trustLevel?: TrustLevel;
   ownerId?: string;
   teamId?: string;
+  /** Draft SQL (or equivalent transformation) for the proposed model. */
+  sql?: string;
+  sqlDialect?: string;
   tags?: string[];
   notes?: string;
   createdAt: string;

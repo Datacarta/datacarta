@@ -23,6 +23,8 @@ export type {
   Transformation,
   ModelingIntent,
   SourceClassification,
+  SourceOrigin,
+  IngestionMethod,
   PhysicalLocation,
   Owner,
   Team,
@@ -32,6 +34,7 @@ export type {
   GovernanceTemplate,
   GovernanceViolation,
   ValidationResult,
+  BlueprintStatus,
 } from "./types.js";
 
 import * as T from "./types.js";
