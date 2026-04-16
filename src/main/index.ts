@@ -117,3 +117,195 @@ ipcMain.handle("dc:saveProject", async (_evt, filename: string, content: string)
     return { ok: false as const, error: msg };
   }
 });
+
+// ── Warehouse introspection (PAT-based reads only) ───────────────────
+// These handlers live in the main process so personal access tokens never
+// sit on a cross-origin renderer request. We only ever READ metadata; no
+// mutations, no data export.
+
+interface DatabricksColumn {
+  name: string;
+  type_text?: string;
+  type_name?: string;
+  nullable?: boolean;
+  position?: number;
+  comment?: string;
+}
+interface DatabricksTable {
+  name: string;
+  full_name?: string;
+  comment?: string;
+  columns?: DatabricksColumn[];
+}
+
+ipcMain.handle(
+  "dc:introspectDatabricks",
+  async (
+    _evt,
+    config: {
+      workspace: string;
+      catalog: string;
+      schema: string;
+      token: string;
+      tables?: string;
+    },
+  ): Promise<
+    | { ok: true; tables: DatabricksTable[] }
+    | { ok: false; error: string }
+  > => {
+    try {
+      const baseUrl = (config.workspace || "").trim().replace(/\/+$/, "");
+      if (!baseUrl) return { ok: false, error: "Workspace URL is required." };
+      if (!config.token) return { ok: false, error: "Personal access token is required." };
+      if (!config.catalog) return { ok: false, error: "Catalog is required." };
+      if (!config.schema) return { ok: false, error: "Schema is required." };
+
+      const url =
+        `${baseUrl}/api/2.1/unity-catalog/tables` +
+        `?catalog_name=${encodeURIComponent(config.catalog)}` +
+        `&schema_name=${encodeURIComponent(config.schema)}`;
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${config.token}`,
+          Accept: "application/json",
+        },
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        return {
+          ok: false,
+          error: `Databricks API ${res.status}: ${body.slice(0, 400)}`,
+        };
+      }
+      const data = (await res.json()) as { tables?: DatabricksTable[] };
+      let tables = data.tables ?? [];
+      if (config.tables && config.tables.trim()) {
+        const wanted = config.tables
+          .split(",")
+          .map((t) => t.trim().toLowerCase())
+          .filter(Boolean);
+        tables = tables.filter((t) => wanted.includes(t.name.toLowerCase()));
+      }
+      return { ok: true, tables };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  },
+);
+
+interface SnowflakeTableIntrospection {
+  name: string;
+  columns: Array<{ name: string; type: string; nullable: boolean; comment?: string }>;
+}
+
+ipcMain.handle(
+  "dc:introspectSnowflake",
+  async (
+    _evt,
+    config: {
+      account: string;
+      database: string;
+      schema: string;
+      warehouse: string;
+      token: string;
+      role?: string;
+      tables?: string;
+    },
+  ): Promise<
+    | { ok: true; tables: SnowflakeTableIntrospection[] }
+    | { ok: false; error: string }
+  > => {
+    try {
+      const account = (config.account || "").trim();
+      if (!account) return { ok: false, error: "Account identifier is required." };
+      if (!config.token) return { ok: false, error: "Personal access token is required." };
+      if (!config.database) return { ok: false, error: "Database is required." };
+      if (!config.schema) return { ok: false, error: "Schema is required." };
+      if (!config.warehouse) return { ok: false, error: "Warehouse is required." };
+
+      const hostRaw = account.replace(/^https?:\/\//, "").replace(/\/$/, "");
+      const host = hostRaw.includes(".") ? hostRaw : `${hostRaw}.snowflakecomputing.com`;
+      const endpoint = `https://${host}/api/v2/statements`;
+
+      // INFORMATION_SCHEMA expects schema names uppercase unless the object was
+      // quoted on creation. We uppercase here to match the common case; users
+      // who need case-sensitive lookups can file a bug.
+      const db = config.database.replace(/"/g, "");
+      const sch = config.schema.replace(/'/g, "").toUpperCase();
+      let sql =
+        `SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COMMENT ` +
+        `FROM "${db}".INFORMATION_SCHEMA.COLUMNS ` +
+        `WHERE TABLE_SCHEMA = '${sch}'`;
+      if (config.tables && config.tables.trim()) {
+        const list = config.tables
+          .split(",")
+          .map((t) => t.trim().replace(/'/g, "").toUpperCase())
+          .filter(Boolean);
+        if (list.length > 0) {
+          sql += ` AND TABLE_NAME IN (${list.map((t) => `'${t}'`).join(", ")})`;
+        }
+      }
+      sql += ` ORDER BY TABLE_NAME, ORDINAL_POSITION`;
+
+      const body = {
+        statement: sql,
+        timeout: 60,
+        database: config.database,
+        schema: "INFORMATION_SCHEMA",
+        warehouse: config.warehouse,
+        ...(config.role ? { role: config.role } : {}),
+      };
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${config.token}`,
+          "X-Snowflake-Authorization-Token-Type": "PROGRAMMATIC_ACCESS_TOKEN",
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        return {
+          ok: false,
+          error: `Snowflake API ${res.status}: ${text.slice(0, 400)}`,
+        };
+      }
+      const data = (await res.json()) as {
+        code?: string;
+        message?: string;
+        data?: string[][];
+        resultSetMetaData?: { rowType?: Array<{ name: string }> };
+      };
+      if (!data.data) {
+        return {
+          ok: false,
+          error:
+            data.message ??
+            "Snowflake returned no rows. Check that the PAT has USAGE on the database/schema.",
+        };
+      }
+      const byTable = new Map<string, SnowflakeTableIntrospection["columns"]>();
+      for (const row of data.data) {
+        const [tableName, columnName, dataType, isNullable, comment] = row;
+        if (!tableName || !columnName) continue;
+        const cols = byTable.get(tableName) ?? [];
+        cols.push({
+          name: columnName,
+          type: dataType ?? "VARIANT",
+          nullable: (isNullable ?? "YES").toUpperCase() === "YES",
+          comment: comment || undefined,
+        });
+        byTable.set(tableName, cols);
+      }
+      const tables: SnowflakeTableIntrospection[] = [...byTable.entries()].map(
+        ([name, columns]) => ({ name, columns }),
+      );
+      return { ok: true, tables };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  },
+);
