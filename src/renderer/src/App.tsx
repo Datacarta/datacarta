@@ -2,13 +2,15 @@ import { useEffect } from "react";
 import { validateDatacartaGraph, type DatacartaGraph } from "datacarta-spec/client";
 import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
-import { ExportView } from "./features/export/ExportView";
-import { GraphView } from "./features/graph/GraphView";
-import { ImportsView } from "./features/import/ImportsView";
-import { NodesView } from "./features/nodes/NodesView";
-import { BlueprintsView } from "./features/blueprints/BlueprintsView";
 import { ProjectsView } from "./features/projects/ProjectsView";
+import { ImportsView } from "./features/import/ImportsView";
+import { ExportView } from "./features/export/ExportView";
 import { SettingsView } from "./features/settings/SettingsView";
+import { DataLayerView } from "./features/data-layer/DataLayerView";
+import { ModelsView } from "./features/models/ModelsView";
+import { MetricsView } from "./features/metrics/MetricsView";
+import { BlueprintsView } from "./features/blueprints/BlueprintsView";
+import { GovernanceView } from "./features/governance/GovernanceView";
 import { useWorkspaceStore } from "./store/useWorkspaceStore";
 
 export default function App(): JSX.Element {
@@ -30,7 +32,7 @@ export default function App(): JSX.Element {
         const raw = JSON.parse(text) as unknown;
         const v = validateDatacartaGraph(raw);
         if (!v.ok || cancelled) return;
-        openWorkspace(raw as DatacartaGraph, null, []);
+        openWorkspace(raw as DatacartaGraph, null);
       } catch {
         /* sample optional */
       }
@@ -47,30 +49,36 @@ export default function App(): JSX.Element {
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar graph={graph} projectFilename={projectFilename} />
         {lastError ? (
-          <div className="border-b border-red-500/30 bg-red-950/40 px-4 py-3 text-sm text-red-100">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="font-semibold">Something went wrong</div>
-                <div className="mt-1 whitespace-pre-wrap font-mono text-xs text-red-100/90">{lastError}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setLastError(null)}
-                className="shrink-0 rounded-md border border-red-500/30 bg-red-950/40 px-2 py-1 text-xs font-semibold text-red-50 hover:bg-red-950/70"
-              >
-                Dismiss
-              </button>
+          <div
+            className="flex items-start justify-between gap-3 px-4 py-2.5 text-sm"
+            style={{
+              background: "rgba(239,68,68,0.1)",
+              borderBottom: "0.5px solid rgba(239,68,68,0.2)",
+            }}
+          >
+            <div className="min-w-0">
+              <div className="font-medium text-red-300 text-[13px]">Error</div>
+              <div className="mt-0.5 whitespace-pre-wrap font-mono text-[11px] text-red-200/80">{lastError}</div>
             </div>
+            <button
+              type="button"
+              onClick={() => setLastError(null)}
+              className="shrink-0 rounded-md px-2 py-1 text-[11px] font-medium text-red-200 hover:bg-red-500/10"
+            >
+              Dismiss
+            </button>
           </div>
         ) : null}
         <main className="min-h-0 flex-1 overflow-auto p-4">
-          {activeView === "projects" ? <ProjectsView /> : null}
-          {activeView === "graph" ? <GraphView /> : null}
-          {activeView === "nodes" ? <NodesView /> : null}
-          {activeView === "blueprints" ? <BlueprintsView /> : null}
-          {activeView === "imports" ? <ImportsView /> : null}
-          {activeView === "export" ? <ExportView /> : null}
-          {activeView === "settings" ? <SettingsView /> : null}
+          {activeView === "projects" && <ProjectsView />}
+          {activeView === "data-layer" && <DataLayerView />}
+          {activeView === "models" && <ModelsView />}
+          {activeView === "metrics" && <MetricsView />}
+          {activeView === "blueprints" && <BlueprintsView />}
+          {activeView === "governance" && <GovernanceView />}
+          {activeView === "imports" && <ImportsView />}
+          {activeView === "export" && <ExportView />}
+          {activeView === "settings" && <SettingsView />}
         </main>
       </div>
     </div>

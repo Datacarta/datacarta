@@ -5,18 +5,27 @@ export default {
     extend: {
       colors: {
         canvas: {
-          DEFAULT: "#0b0f14",
-          muted: "#121922",
-          border: "#1f2a3a",
+          DEFAULT: "#000000",
+          elevated: "rgba(28,28,30,0.6)",
+          secondary: "rgba(44,44,46,0.6)",
+          border: "rgba(255,255,255,0.08)",
         },
         accent: {
-          DEFAULT: "#5eead4",
-          dim: "#2dd4bf",
+          DEFAULT: "#007AFF",
+          dim: "#0A84FF",
+        },
+        surface: {
+          primary: "#FFFFFF",
+          secondary: "rgba(255,255,255,0.6)",
+          tertiary: "rgba(255,255,255,0.3)",
         },
       },
       fontFamily: {
-        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "sans-serif"],
         mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+      },
+      backdropBlur: {
+        glass: "20px",
       },
     },
   },

@@ -1,17 +1,17 @@
 import { useWorkspaceStore } from "../../store/useWorkspaceStore";
 
-export function BlueprintsView(): JSX.Element {
+export function ModelsView(): JSX.Element {
   const graph = useWorkspaceStore((s) => s.graph);
   if (!graph) {
     return (
       <div className="flex h-full items-center justify-center text-[13px]" style={{ color: "rgba(255,255,255,0.3)" }}>
-        Load a graph first, then plan models here.
+        No graph loaded.
       </div>
     );
   }
   return (
     <div className="text-[13px] text-white/50">
-      Blueprints — {graph.blueprints.length} blueprints
+      Models directory — {graph.models.length} models
     </div>
   );
 }
