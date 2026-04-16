@@ -1,12 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
+import { validateDatacartaGraph, type DatacartaGraph } from "datacarta-spec/client";
 import { parseWorkspaceFile, serializeWorkspace } from "../../lib/persist";
 import { useWorkspaceStore } from "../../store/useWorkspaceStore";
+
+function emptyGraph(): DatacartaGraph {
+  return {
+    specVersion: "0.2.0",
+    projectId: `proj-${Date.now().toString(36)}`,
+    projectName: "New Workspace",
+    layerDefinitions: [],
+    models: [],
+    edges: [],
+    metrics: [],
+    dataMarts: [],
+    blueprints: [],
+    owners: [],
+    teams: [],
+  };
+}
 
 export function ProjectsView(): JSX.Element {
   const graph = useWorkspaceStore((s) => s.graph);
   const openWorkspace = useWorkspaceStore((s) => s.openWorkspace);
   const projectFilename = useWorkspaceStore((s) => s.projectFilename);
   const setLastError = useWorkspaceStore((s) => s.setLastError);
+  const setActiveView = useWorkspaceStore((s) => s.setActiveView);
 
   const [files, setFiles] = useState<string[]>([]);
   const [filename, setFilename] = useState("harmonic-audio.dcproj.json");
@@ -18,12 +36,66 @@ export function ProjectsView(): JSX.Element {
     setFiles(list);
   }
 
+  async function loadExample(): Promise<void> {
+    setLastError(null);
+    try {
+      const p = await window.datacarta.resolveSamplePath();
+      if (!p) {
+        setLastError("Bundled example not found.");
+        return;
+      }
+      const text = await window.datacarta.readTextFile(p);
+      const raw = JSON.parse(text) as unknown;
+      const v = validateDatacartaGraph(raw);
+      if (!v.ok) {
+        setLastError("Bundled example failed validation.");
+        return;
+      }
+      openWorkspace(raw as DatacartaGraph, null);
+      setActiveView("data-layer");
+    } catch (e) {
+      setLastError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  function startEmptyProject(): void {
+    setLastError(null);
+    openWorkspace(emptyGraph(), null);
+    setActiveView("imports");
+  }
+
   useEffect(() => {
     void refresh();
   }, []);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4 p-2">
+      <div className="glass rounded-2xl p-5">
+        <div className="text-[13px] font-semibold text-[var(--text-primary)]">Start a workspace</div>
+        <p className="mt-2 text-[13px] leading-relaxed" style={{ color: "var(--text-tertiary)" }}>
+          Create an empty project and build it up from imports, or load the bundled Harmonic Audio
+          example to see a fully populated Datacarta graph.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={startEmptyProject}
+            className="rounded-lg px-4 py-2 text-[13px] font-semibold text-white"
+            style={{ background: "#007AFF" }}
+          >
+            New empty project
+          </button>
+          <button
+            type="button"
+            onClick={() => void loadExample()}
+            className="rounded-lg px-4 py-2 text-[13px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            style={{ background: "var(--surface-hover)", border: "0.5px solid var(--border)" }}
+          >
+            Load example
+          </button>
+        </div>
+      </div>
+
       <div className="glass rounded-2xl p-5">
         <div className="text-[13px] font-semibold text-[var(--text-primary)]">Save current workspace</div>
         <p className="mt-2 text-[13px] leading-relaxed" style={{ color: "var(--text-tertiary)" }}>

@@ -69,7 +69,7 @@ const savedTheme = (typeof localStorage !== "undefined"
 if (typeof document !== "undefined") applyThemeToDOM(savedTheme);
 
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
-  activeView: "data-layer",
+  activeView: "projects",
   graph: null,
   projectFilename: null,
   selectedModelId: null,

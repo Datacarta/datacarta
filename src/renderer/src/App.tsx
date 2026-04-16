@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-import { validateDatacartaGraph, type DatacartaGraph } from "datacarta-spec/client";
 import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { ProjectsView } from "./features/projects/ProjectsView";
@@ -17,31 +15,9 @@ export default function App(): JSX.Element {
   const activeView = useWorkspaceStore((s) => s.activeView);
   const setActiveView = useWorkspaceStore((s) => s.setActiveView);
   const graph = useWorkspaceStore((s) => s.graph);
-  const openWorkspace = useWorkspaceStore((s) => s.openWorkspace);
   const projectFilename = useWorkspaceStore((s) => s.projectFilename);
   const lastError = useWorkspaceStore((s) => s.lastError);
   const setLastError = useWorkspaceStore((s) => s.setLastError);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function boot(): Promise<void> {
-      try {
-        const p = await window.datacarta.resolveSamplePath();
-        if (!p || cancelled) return;
-        const text = await window.datacarta.readTextFile(p);
-        const raw = JSON.parse(text) as unknown;
-        const v = validateDatacartaGraph(raw);
-        if (!v.ok || cancelled) return;
-        openWorkspace(raw as DatacartaGraph, null);
-      } catch {
-        /* sample optional */
-      }
-    }
-    void boot();
-    return () => {
-      cancelled = true;
-    };
-  }, [openWorkspace]);
 
   return (
     <div className="flex h-full min-h-0">
