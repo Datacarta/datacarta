@@ -1,0 +1,26 @@
+{
+  "name": "datacarta-connectors",
+  "version": "0.1.0",
+  "description": "Open-source connector SDK and starter connectors for Datacarta (file/mock + vendor stubs).",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "datacarta-spec": "file:../datacarta-spec"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "typescript": "^5.7.3"
+  }
+}

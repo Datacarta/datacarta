@@ -1,0 +1,23 @@
+{
+  "name": "datacarta-mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server for querying a local Datacarta graph JSON and exporting deterministic context packages.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "datacarta-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "datacarta-spec": "file:../datacarta-spec"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "typescript": "^5.7.3"
+  }
+}
