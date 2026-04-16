@@ -1,17 +1,30 @@
 import { app, BrowserWindow, ipcMain, dialog } from "electron";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const requireFromMain = createRequire(import.meta.url);
 
 function resolveHarmonicSamplePath(): string | null {
-  const rel = join("datacarta-spec", "samples", "harmonic-audio.sample.json");
+  // Preferred: resolve through the installed/linked datacarta-spec package so
+  // this works in both the workspace-symlinked dev layout and a packaged app.
+  try {
+    const specPkg = requireFromMain.resolve("datacarta-spec/package.json");
+    const p = join(dirname(specPkg), "samples", "harmonic-audio.sample.json");
+    if (existsSync(p)) return p;
+  } catch {
+    /* fall through to filesystem candidates */
+  }
+  // Fallback: sibling directory layouts (monorepo dev, side-by-side repos).
+  const rel = join("samples", "harmonic-audio.sample.json");
   const candidates = [
-    join(app.getAppPath(), "..", rel),
-    join(process.cwd(), "..", rel),
-    join(process.cwd(), rel),
+    join(app.getAppPath(), "..", "spec", rel),
+    join(process.cwd(), "..", "spec", rel),
+    join(app.getAppPath(), "..", "datacarta-spec", rel),
+    join(process.cwd(), "..", "datacarta-spec", rel),
   ];
   for (const p of candidates) {
     if (existsSync(p)) return p;

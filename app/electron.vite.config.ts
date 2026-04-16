@@ -15,7 +15,7 @@ export default defineConfig({
       alias: {
         "@": resolve("src/renderer/src"),
         // Bundle from TS source: Rollup mis-detects some CJS re-export patterns in `dist/client.js`.
-        "datacarta-spec/client": resolve(__dirname, "../datacarta-spec/src/client.ts"),
+        "datacarta-spec/client": resolve(__dirname, "../spec/src/client.ts"),
       },
     },
     server: {

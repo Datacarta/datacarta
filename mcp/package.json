@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.6.1",
-    "datacarta-spec": "file:../datacarta-spec"
+    "datacarta-spec": "*"
   },
   "devDependencies": {
     "@types/node": "^22.13.1",

@@ -1,0 +1,21 @@
+{
+  "name": "datacarta",
+  "private": true,
+  "version": "0.0.0",
+  "description": "An open spec and desktop studio for mapping your data architecture.",
+  "license": "MIT",
+  "workspaces": [
+    "spec",
+    "connectors",
+    "mcp",
+    "app"
+  ],
+  "scripts": {
+    "build:spec": "npm --workspace spec run build",
+    "build:connectors": "npm --workspace connectors run build",
+    "build:mcp": "npm --workspace mcp run build",
+    "build": "npm run build:spec && npm run build:connectors && npm run build:mcp",
+    "dev": "npm run build:spec && npm --workspace app run dev",
+    "test": "npm --workspace spec test"
+  }
+}

@@ -17,7 +17,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "datacarta-spec": "file:../datacarta-spec"
+    "datacarta-spec": "*"
   },
   "devDependencies": {
     "@types/node": "^22.13.1",
