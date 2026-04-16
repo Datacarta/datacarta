@@ -1,6 +1,6 @@
 {
   "name": "datacarta-spec",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Canonical Datacarta context graph — TypeScript types, JSON Schema, validation, and context packaging helpers.",
   "license": "MIT",
   "main": "./dist/index.js",
