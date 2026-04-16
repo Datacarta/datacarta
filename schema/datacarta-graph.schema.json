@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://datacarta.dev/schema/datacarta-graph.schema.json",
+  "title": "DatacartaContextGraph",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specVersion", "projectId", "projectName", "nodes", "edges"],
+  "properties": {
+    "specVersion": { "type": "string", "pattern": "^0\\.[0-9]+\\.[0-9]+$" },
+    "projectId": { "type": "string", "minLength": 1 },
+    "projectName": { "type": "string", "minLength": 1 },
+    "projectDescription": { "type": "string" },
+    "domains": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "nodes": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/node" }
+    },
+    "edges": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/edge" }
+    }
+  },
+  "definitions": {
+    "nodeType": {
+      "type": "string",
+      "enum": [
+        "source_system",
+        "raw_table",
+        "staged_model",
+        "intermediate_model",
+        "mart_model",
+        "metric",
+        "dashboard",
+        "event_definition",
+        "entity",
+        "dimension",
+        "owner",
+        "team"
+      ]
+    },
+    "edgeType": {
+      "type": "string",
+      "enum": [
+        "upstream_of",
+        "feeds",
+        "defines",
+        "owned_by",
+        "documented_by",
+        "powers",
+        "maps_to",
+        "depends_on",
+        "joins_with"
+      ]
+    },
+    "trustLevel": {
+      "type": "string",
+      "enum": ["unknown", "draft", "reviewed", "trusted", "deprecated"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "draft", "deprecated"]
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "name"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "$ref": "#/definitions/nodeType" },
+        "name": { "type": "string", "minLength": 1 },
+        "displayName": { "type": "string" },
+        "description": { "type": "string" },
+        "grain": { "type": "string" },
+        "trustLevel": { "$ref": "#/definitions/trustLevel" },
+        "status": { "$ref": "#/definitions/status" },
+        "ownerId": { "type": "string" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "metadata": { "type": "object" },
+        "usageHints": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "caveats": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "sourceId", "targetId"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "$ref": "#/definitions/edgeType" },
+        "sourceId": { "type": "string", "minLength": 1 },
+        "targetId": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "metadata": { "type": "object" }
+      }
+    }
+  }
+}
