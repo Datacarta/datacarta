@@ -3,7 +3,7 @@ import type { AppView } from "../store/useWorkspaceStore";
 interface NavItem {
   id: AppView;
   label: string;
-  icon: string; // Unicode/emoji for now, SF Symbols later
+  icon: string;
 }
 
 interface NavSection {
@@ -60,9 +60,19 @@ function NavIcon({ name }: { name: string }) {
 
 export function Sidebar(props: { active: AppView; onSelect: (v: AppView) => void }): JSX.Element {
   return (
-    <aside className="glass flex w-56 flex-col" style={{ borderRight: "0.5px solid rgba(255,255,255,0.08)" }}>
-      <div className="px-4 pb-3 pt-12">
-        <div className="text-[11px] font-medium uppercase tracking-[0.15em]" style={{ color: "rgba(255,255,255,0.35)" }}>
+    <aside
+      className="glass flex w-56 flex-col"
+      style={{ borderRight: "0.5px solid var(--border)" }}
+    >
+      {/* macOS traffic light space */}
+      <div
+        className="px-4 pb-3 pt-10"
+        style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+      >
+        <div
+          className="text-[11px] font-medium uppercase tracking-[0.15em]"
+          style={{ color: "var(--text-quaternary)" }}
+        >
           Datacarta
         </div>
       </div>
@@ -70,7 +80,10 @@ export function Sidebar(props: { active: AppView; onSelect: (v: AppView) => void
       <nav className="flex-1 space-y-5 px-2 overflow-auto">
         {sections.map((section) => (
           <div key={section.title}>
-            <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.3)" }}>
+            <div
+              className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
+              style={{ color: "var(--text-quaternary)" }}
+            >
               {section.title}
             </div>
             <div className="space-y-0.5">
@@ -81,12 +94,12 @@ export function Sidebar(props: { active: AppView; onSelect: (v: AppView) => void
                     key={item.id}
                     type="button"
                     onClick={() => props.onSelect(item.id)}
-                    className={[
-                      "group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-all duration-150",
-                      active
-                        ? "bg-white/10 text-white font-medium"
-                        : "text-white/50 hover:text-white/70 hover:bg-white/[0.04]",
-                    ].join(" ")}
+                    className="group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-all duration-150"
+                    style={{
+                      background: active ? "var(--surface-active)" : undefined,
+                      color: active ? "var(--text-primary)" : "var(--text-tertiary)",
+                      fontWeight: active ? 500 : undefined,
+                    }}
                   >
                     <NavIcon name={item.icon} />
                     <span>{item.label}</span>
@@ -102,12 +115,12 @@ export function Sidebar(props: { active: AppView; onSelect: (v: AppView) => void
         <button
           type="button"
           onClick={() => props.onSelect("settings")}
-          className={[
-            "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] transition-all duration-150",
-            props.active === "settings"
-              ? "bg-white/10 text-white font-medium"
-              : "text-white/50 hover:text-white/70 hover:bg-white/[0.04]",
-          ].join(" ")}
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] transition-all duration-150"
+          style={{
+            background: props.active === "settings" ? "var(--surface-active)" : undefined,
+            color: props.active === "settings" ? "var(--text-primary)" : "var(--text-tertiary)",
+            fontWeight: props.active === "settings" ? 500 : undefined,
+          }}
         >
           <NavIcon name="settings" />
           <span>Settings</span>

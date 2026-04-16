@@ -25,23 +25,23 @@ export function ProjectsView(): JSX.Element {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4 p-2">
       <div className="glass rounded-2xl p-5">
-        <div className="text-[13px] font-semibold text-white">Save current workspace</div>
-        <p className="mt-2 text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.4)" }}>
+        <div className="text-[13px] font-semibold text-[var(--text-primary)]">Save current workspace</div>
+        <p className="mt-2 text-[13px] leading-relaxed" style={{ color: "var(--text-tertiary)" }}>
           Projects are stored locally as <span className="font-mono">*.dcproj.json</span>.
         </p>
         <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-end">
           <div className="flex-1">
-            <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.3)" }} htmlFor="fname">
+            <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-quaternary)" }} htmlFor="fname">
               Filename
             </label>
             <input
               id="fname"
               value={filename}
               onChange={(e) => setFilename(e.target.value)}
-              className="mt-1 w-full rounded-lg px-3 py-2 font-mono text-[13px] text-white outline-none"
+              className="mt-1 w-full rounded-lg px-3 py-2 font-mono text-[13px] outline-none"
               style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "0.5px solid rgba(255,255,255,0.1)",
+                background: "var(--surface-hover)",
+                border: "0.5px solid var(--border-strong)",
               }}
             />
           </div>
@@ -59,27 +59,27 @@ export function ProjectsView(): JSX.Element {
                 await refresh();
               }
             }}
-            className="rounded-lg px-4 py-2 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-lg px-4 py-2 text-[13px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"
             style={{ background: "#007AFF" }}
           >
             Save
           </button>
         </div>
         {projectFilename ? (
-          <div className="mt-3 text-[11px]" style={{ color: "rgba(255,255,255,0.3)" }}>
-            Active file: <span className="font-mono" style={{ color: "rgba(255,255,255,0.6)" }}>{projectFilename}</span>
+          <div className="mt-3 text-[11px]" style={{ color: "var(--text-quaternary)" }}>
+            Active file: <span className="font-mono" style={{ color: "var(--text-secondary)" }}>{projectFilename}</span>
           </div>
         ) : null}
       </div>
 
       <div className="glass rounded-2xl p-5">
         <div className="flex items-center justify-between gap-3">
-          <div className="text-[13px] font-semibold text-white">Saved projects</div>
+          <div className="text-[13px] font-semibold text-[var(--text-primary)]">Saved projects</div>
           <button
             type="button"
             onClick={() => void refresh()}
-            className="rounded-lg px-3 py-1.5 text-[11px] font-semibold text-white/60 hover:text-white/80"
-            style={{ background: "rgba(255,255,255,0.06)", border: "0.5px solid rgba(255,255,255,0.08)" }}
+            className="rounded-lg px-3 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            style={{ background: "var(--surface-hover)", border: "0.5px solid var(--border)" }}
           >
             Refresh
           </button>
@@ -91,9 +91,9 @@ export function ProjectsView(): JSX.Element {
               <div
                 key={f}
                 className="flex flex-col gap-2 rounded-lg p-3 md:flex-row md:items-center md:justify-between"
-                style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.06)" }}
+                style={{ background: "var(--surface-hover)", border: "0.5px solid var(--surface-hover)" }}
               >
-                <div className="font-mono text-[13px] text-white/70">{f}</div>
+                <div className="font-mono text-[13px] text-[var(--text-secondary)]">{f}</div>
                 <button
                   type="button"
                   onClick={async () => {
@@ -106,8 +106,8 @@ export function ProjectsView(): JSX.Element {
                       setLastError(e instanceof Error ? e.message : String(e));
                     }
                   }}
-                  className="rounded-lg px-3 py-1.5 text-[11px] font-semibold text-white/60 hover:text-white/80"
-                  style={{ background: "rgba(255,255,255,0.06)", border: "0.5px solid rgba(255,255,255,0.08)" }}
+                  className="rounded-lg px-3 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  style={{ background: "var(--surface-hover)", border: "0.5px solid var(--border)" }}
                 >
                   Open
                 </button>
@@ -115,7 +115,7 @@ export function ProjectsView(): JSX.Element {
             ))}
           </div>
         ) : (
-          <div className="mt-4 rounded-lg p-6 text-center text-[13px]" style={{ color: "rgba(255,255,255,0.3)", border: "0.5px dashed rgba(255,255,255,0.1)" }}>
+          <div className="mt-4 rounded-lg p-6 text-center text-[13px]" style={{ color: "var(--text-quaternary)", border: "0.5px dashed var(--border-strong)" }}>
             No saved projects yet. Load a graph from Connectors, then save it here.
           </div>
         )}
