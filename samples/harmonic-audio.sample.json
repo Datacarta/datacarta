@@ -1,291 +1,586 @@
 {
-  "specVersion": "0.1.0",
+  "specVersion": "0.2.0",
   "projectId": "harmonic-audio-analytics",
   "projectName": "Harmonic Audio — Fan Engagement Analytics",
   "projectDescription": "Fictional streaming audio company: maps ingestion, dbt-style models, metrics, and dashboards.",
-  "domains": ["growth", "product", "trust_safety"],
-  "nodes": [
+  "domains": ["growth", "finance"],
+  "layerDefinitions": [
     {
-      "id": "team-data-platform",
-      "type": "team",
-      "name": "data_platform",
-      "displayName": "Data Platform",
-      "description": "Owns core pipelines and modeling standards.",
-      "trustLevel": "trusted",
-      "status": "active",
-      "tags": ["owner_group"]
+      "id": "layer-source",
+      "name": "Source",
+      "type": "source",
+      "order": 0
     },
     {
-      "id": "owner-maya-chen",
-      "type": "owner",
-      "name": "maya.chen",
-      "displayName": "Maya Chen",
-      "description": "Analytics engineering lead.",
-      "trustLevel": "trusted",
-      "status": "active",
-      "tags": ["person"]
+      "id": "layer-raw",
+      "name": "Raw",
+      "type": "raw",
+      "order": 1
     },
+    {
+      "id": "layer-staging",
+      "name": "Staging",
+      "type": "staging",
+      "order": 2
+    },
+    {
+      "id": "layer-intermediate",
+      "name": "Intermediate",
+      "type": "intermediate",
+      "order": 3
+    },
+    {
+      "id": "layer-mart",
+      "name": "Mart",
+      "type": "mart",
+      "order": 4,
+      "domains": ["growth", "finance"]
+    },
+    {
+      "id": "layer-semantic",
+      "name": "Semantic",
+      "type": "semantic",
+      "order": 5
+    },
+    {
+      "id": "layer-consumption",
+      "name": "Consumption",
+      "type": "consumption",
+      "order": 6
+    }
+  ],
+  "models": [
     {
       "id": "src-snowplow",
-      "type": "source_system",
+      "layerId": "layer-source",
       "name": "snowplow",
       "displayName": "Snowplow (events)",
-      "description": "Behavioral event stream for web and mobile clients.",
+      "description": "Frontend behavioral event stream for web and mobile clients.",
+      "columns": [],
+      "sourceClassification": {
+        "origin": "frontend",
+        "ingestionMethod": "event_stream"
+      },
       "trustLevel": "trusted",
       "status": "active",
       "ownerId": "owner-maya-chen",
-      "tags": ["events"]
+      "teamId": "team-data-platform"
     },
     {
-      "id": "src-billing",
-      "type": "source_system",
+      "id": "src-stripe",
+      "layerId": "layer-source",
       "name": "stripe",
       "displayName": "Stripe Billing",
-      "description": "Subscriptions and invoices.",
+      "description": "Third-party billing provider for subscriptions and invoices.",
+      "columns": [],
+      "sourceClassification": {
+        "origin": "third_party",
+        "ingestionMethod": "batch_api"
+      },
       "trustLevel": "trusted",
       "status": "active",
-      "tags": ["finance"]
+      "ownerId": "owner-maya-chen",
+      "teamId": "team-data-platform"
     },
     {
-      "id": "raw-events",
-      "type": "raw_table",
-      "name": "raw.snowplow.events",
+      "id": "raw-snowplow-events",
+      "layerId": "layer-raw",
+      "name": "raw_snowplow_events",
       "displayName": "Raw Snowplow Events",
       "description": "Append-only landing table for Snowplow enriched events.",
       "grain": "event",
-      "trustLevel": "reviewed",
-      "status": "active",
-      "ownerId": "owner-maya-chen",
-      "tags": ["landing"],
-      "usageHints": ["Filter client-generated events using event_vendor = 'harmonic'."],
-      "metadata": {
-        "starSchemaRole": "staging",
-        "physical": {
-          "warehouse": "snowflake",
-          "database": "HA_ANALYTICS",
-          "schema": "RAW",
-          "relation": "RAW.SNOWPLOW.EVENTS"
+      "columns": [
+        {
+          "id": "raw-snowplow-events-event-id",
+          "name": "event_id",
+          "dataType": "varchar(64)",
+          "logicalType": "string",
+          "description": "Snowplow event UUID",
+          "isPrimaryKey": true
         },
-        "columns": [
-          { "name": "event_id", "physicalType": "varchar(64)", "keys": ["PK"], "description": "Snowplow event UUID" },
-          { "name": "event_ts", "physicalType": "timestamp_tz(9)", "keys": [], "description": "Collector timestamp" },
-          { "name": "user_id", "physicalType": "varchar(64)", "keys": ["FK->dim_fan"], "description": "Hashed fan id" },
-          { "name": "artist_id", "physicalType": "varchar(64)", "keys": ["FK->dim_artist"], "description": "Artist dimension key" },
-          { "name": "event_name", "physicalType": "varchar(128)", "keys": [], "description": "Self-describing event name" }
-        ]
-      }
-    },
-    {
-      "id": "raw-subscriptions",
-      "type": "raw_table",
-      "name": "raw.stripe.subscriptions",
-      "displayName": "Raw Stripe Subscriptions",
-      "grain": "subscription_id",
+        {
+          "id": "raw-snowplow-events-event-ts",
+          "name": "event_ts",
+          "dataType": "timestamp_tz",
+          "logicalType": "timestamp",
+          "description": "Collector timestamp"
+        },
+        {
+          "id": "raw-snowplow-events-user-id",
+          "name": "user_id",
+          "dataType": "varchar(64)",
+          "logicalType": "string",
+          "description": "Hashed fan id"
+        },
+        {
+          "id": "raw-snowplow-events-artist-id",
+          "name": "artist_id",
+          "dataType": "varchar(64)",
+          "logicalType": "string",
+          "description": "Artist dimension key"
+        },
+        {
+          "id": "raw-snowplow-events-event-name",
+          "name": "event_name",
+          "dataType": "varchar(128)",
+          "logicalType": "string",
+          "description": "Self-describing event name"
+        }
+      ],
       "trustLevel": "reviewed",
       "status": "active",
       "ownerId": "owner-maya-chen",
-      "tags": ["landing"]
+      "teamId": "team-data-platform"
     },
     {
-      "id": "stg-events-clean",
-      "type": "staged_model",
+      "id": "raw-stripe-subscriptions",
+      "layerId": "layer-raw",
+      "name": "raw_stripe_subscriptions",
+      "displayName": "Raw Stripe Subscriptions",
+      "description": "Landing table for Stripe subscription records.",
+      "grain": "subscription_id",
+      "columns": [
+        {
+          "id": "raw-stripe-subs-subscription-id",
+          "name": "subscription_id",
+          "dataType": "varchar(64)",
+          "logicalType": "string",
+          "description": "Stripe subscription UUID",
+          "isPrimaryKey": true
+        },
+        {
+          "id": "raw-stripe-subs-user-id",
+          "name": "user_id",
+          "dataType": "varchar(64)",
+          "logicalType": "string",
+          "description": "Fan account identifier"
+        },
+        {
+          "id": "raw-stripe-subs-plan-name",
+          "name": "plan_name",
+          "dataType": "varchar(128)",
+          "logicalType": "string",
+          "description": "Subscription plan name"
+        },
+        {
+          "id": "raw-stripe-subs-status",
+          "name": "status",
+          "dataType": "varchar(32)",
+          "logicalType": "string",
+          "description": "Stripe subscription status"
+        },
+        {
+          "id": "raw-stripe-subs-created-at",
+          "name": "created_at",
+          "dataType": "timestamp_tz",
+          "logicalType": "timestamp",
+          "description": "Subscription creation timestamp"
+        }
+      ],
+      "trustLevel": "reviewed",
+      "status": "active",
+      "ownerId": "owner-maya-chen",
+      "teamId": "team-data-platform"
+    },
+    {
+      "id": "stg-snowplow-events-clean",
+      "layerId": "layer-staging",
       "name": "stg_snowplow_events_clean",
       "displayName": "Stg — Clean Snowplow Events",
       "description": "Typed columns, bot filtering, PII hashing.",
       "grain": "event",
+      "columns": [
+        {
+          "id": "stg-events-clean-event-id",
+          "name": "event_id",
+          "dataType": "varchar(64)",
+          "logicalType": "string",
+          "description": "Snowplow event UUID",
+          "isPrimaryKey": true
+        },
+        {
+          "id": "stg-events-clean-event-ts",
+          "name": "event_ts",
+          "dataType": "timestamp_tz",
+          "logicalType": "timestamp",
+          "description": "Collector timestamp"
+        },
+        {
+          "id": "stg-events-clean-user-id",
+          "name": "user_id",
+          "dataType": "varchar(64)",
+          "logicalType": "string",
+          "description": "Hashed fan id"
+        },
+        {
+          "id": "stg-events-clean-artist-id",
+          "name": "artist_id",
+          "dataType": "varchar(64)",
+          "logicalType": "string",
+          "description": "Artist dimension key"
+        },
+        {
+          "id": "stg-events-clean-event-name",
+          "name": "event_name",
+          "dataType": "varchar(128)",
+          "logicalType": "string",
+          "description": "Self-describing event name"
+        },
+        {
+          "id": "stg-events-clean-is-bot",
+          "name": "is_bot",
+          "dataType": "boolean",
+          "logicalType": "boolean",
+          "description": "Heuristic bot filter flag"
+        }
+      ],
       "trustLevel": "reviewed",
       "status": "active",
       "ownerId": "owner-maya-chen",
-      "tags": ["staging"],
-      "metadata": {
-        "starSchemaRole": "staging",
-        "physical": {
-          "warehouse": "snowflake",
-          "database": "HA_ANALYTICS",
-          "schema": "STG",
-          "relation": "STG.SNOWPLOW.EVENTS_CLEAN"
-        },
-        "columns": [
-          { "name": "event_id", "physicalType": "varchar(64)", "keys": ["PK"] },
-          { "name": "is_bot", "physicalType": "boolean", "keys": [], "description": "Heuristic bot filter" },
-          { "name": "user_id", "physicalType": "varchar(64)", "keys": [] }
-        ]
-      }
+      "teamId": "team-data-platform"
     },
     {
       "id": "int-user-day-listening",
-      "type": "intermediate_model",
+      "layerId": "layer-intermediate",
       "name": "int_user_day_listening",
       "displayName": "User-Day Listening Sessions",
       "description": "Rolls events into bounded listening sessions per user-day.",
       "grain": "user_day",
+      "columns": [
+        {
+          "id": "int-udl-user-sk",
+          "name": "user_sk",
+          "dataType": "number(38,0)",
+          "logicalType": "integer",
+          "description": "Surrogate key for the fan dimension",
+          "isForeignKey": true
+        },
+        {
+          "id": "int-udl-listening-date",
+          "name": "listening_date",
+          "dataType": "date",
+          "logicalType": "date",
+          "description": "Calendar date of listening activity",
+          "isPrimaryKey": true
+        },
+        {
+          "id": "int-udl-minutes-listened",
+          "name": "minutes_listened",
+          "dataType": "float",
+          "logicalType": "float",
+          "description": "Total minutes listened on this date"
+        },
+        {
+          "id": "int-udl-session-count",
+          "name": "session_count",
+          "dataType": "integer",
+          "logicalType": "integer",
+          "description": "Number of listening sessions on this date"
+        }
+      ],
+      "caveats": ["Sessions split at 30 minutes of inactivity; mobile background audio may overcount."],
       "trustLevel": "reviewed",
       "status": "active",
       "ownerId": "owner-maya-chen",
-      "tags": ["intermediate"],
-      "caveats": ["Sessions split at 30 minutes of inactivity; mobile background audio may overcount."],
-      "metadata": {
-        "starSchemaRole": "fact",
-        "physical": {
-          "warehouse": "snowflake",
-          "database": "HA_ANALYTICS",
-          "schema": "INT",
-          "relation": "INT.USER_DAY_LISTENING"
-        },
-        "columns": [
-          { "name": "user_sk", "physicalType": "number(38,0)", "keys": ["FK->dim_fan"] },
-          { "name": "listening_date", "physicalType": "date", "keys": ["PK"] },
-          { "name": "minutes_listened", "physicalType": "float", "keys": [] }
-        ]
-      }
+      "teamId": "team-data-platform"
     },
     {
-      "id": "mart-fan-artist-week-affinity",
-      "type": "mart_model",
-      "name": "mart_fan_artist_week_affinity",
+      "id": "fct-fan-artist-week-affinity",
+      "layerId": "layer-mart",
+      "domain": "growth",
+      "name": "fct_fan_artist_week_affinity",
       "displayName": "Fan-Artist Weekly Affinity",
       "description": "Weekly affinity scores between fans and artists.",
       "grain": "fan_artist_week",
-      "trustLevel": "trusted",
-      "status": "active",
-      "ownerId": "owner-maya-chen",
-      "tags": ["mart", "growth"],
-      "usageHints": ["Prefer this grain for artist-level CRM campaigns."],
-      "metadata": {
-        "starSchemaRole": "fact",
-        "physical": {
-          "warehouse": "snowflake",
-          "database": "HA_ANALYTICS",
-          "schema": "MART",
-          "relation": "MART.GROWTH.FAN_ARTIST_WEEK_AFFINITY"
+      "columns": [
+        {
+          "id": "fct-fawa-affinity-sk",
+          "name": "affinity_sk",
+          "dataType": "number(38,0)",
+          "logicalType": "integer",
+          "description": "Surrogate primary key",
+          "isPrimaryKey": true,
+          "isSurrogateKey": true
         },
-        "columns": [
-          { "name": "fan_sk", "physicalType": "number(38,0)", "keys": ["FK->dim_fan"] },
-          { "name": "artist_sk", "physicalType": "number(38,0)", "keys": ["FK->dim_artist"] },
-          { "name": "week_start", "physicalType": "date", "keys": ["PK"] },
-          { "name": "affinity_score", "physicalType": "float", "keys": [] }
-        ]
-      }
-    },
-    {
-      "id": "mart-subscriber-health",
-      "type": "mart_model",
-      "name": "mart_subscriber_health",
-      "displayName": "Subscriber Health Snapshot",
-      "grain": "user_id",
-      "trustLevel": "trusted",
-      "status": "active",
-      "ownerId": "owner-maya-chen",
-      "tags": ["mart", "finance"],
-      "metadata": {
-        "starSchemaRole": "fact",
-        "physical": {
-          "warehouse": "snowflake",
-          "database": "HA_ANALYTICS",
-          "schema": "MART",
-          "relation": "MART.FINANCE.SUBSCRIBER_HEALTH"
+        {
+          "id": "fct-fawa-fan-sk",
+          "name": "fan_sk",
+          "dataType": "number(38,0)",
+          "logicalType": "integer",
+          "description": "Foreign key to dim_fan",
+          "isForeignKey": true,
+          "foreignKeyTarget": { "modelId": "dim-fan", "columnId": "dim-fan-fan-sk" }
         },
-        "columns": [
-          { "name": "user_sk", "physicalType": "number(38,0)", "keys": ["PK", "FK->dim_fan"] },
-          { "name": "dunning_stage", "physicalType": "varchar(32)", "keys": [] },
-          { "name": "mrr", "physicalType": "number(18,2)", "keys": [] }
-        ]
-      }
-    },
-    {
-      "id": "metric-weekly-active-fans",
-      "type": "metric",
-      "name": "weekly_active_fans",
-      "displayName": "Weekly Active Fans (WAF)",
-      "description": "Count of fans with ≥1 minute listened in trailing 7 days.",
-      "grain": "user_week",
+        {
+          "id": "fct-fawa-artist-sk",
+          "name": "artist_sk",
+          "dataType": "number(38,0)",
+          "logicalType": "integer",
+          "description": "Foreign key to dim_artist",
+          "isForeignKey": true,
+          "foreignKeyTarget": { "modelId": "dim-artist", "columnId": "dim-artist-artist-sk" }
+        },
+        {
+          "id": "fct-fawa-week-start",
+          "name": "week_start",
+          "dataType": "date",
+          "logicalType": "date",
+          "description": "Monday date of the ISO week"
+        },
+        {
+          "id": "fct-fawa-affinity-score",
+          "name": "affinity_score",
+          "dataType": "float",
+          "logicalType": "float",
+          "description": "Computed fan-artist affinity score (0–1)"
+        },
+        {
+          "id": "fct-fawa-minutes-listened",
+          "name": "minutes_listened",
+          "dataType": "float",
+          "logicalType": "float",
+          "description": "Total minutes the fan listened to this artist in the week"
+        }
+      ],
+      "modelingIntent": { "starRole": "fact" },
       "trustLevel": "trusted",
       "status": "active",
       "ownerId": "owner-maya-chen",
-      "tags": ["kpi", "growth"]
+      "teamId": "team-data-platform",
+      "usageHints": ["Prefer this grain for artist-level CRM campaigns."]
     },
     {
-      "id": "metric-churn-risk",
-      "type": "metric",
-      "name": "churn_risk_score",
-      "displayName": "Churn Risk Score",
-      "description": "Heuristic score 0-100 from listening drop-offs and billing dunning signals.",
-      "grain": "user_id",
-      "trustLevel": "draft",
-      "status": "draft",
-      "ownerId": "owner-maya-chen",
-      "tags": ["kpi", "experimental"],
-      "caveats": ["Draft model — do not use for finance reporting."]
-    },
-    {
-      "id": "dash-growth-pulse",
-      "type": "dashboard",
-      "name": "growth_pulse",
-      "displayName": "Growth Pulse",
-      "description": "North-star KPIs for leadership reviews.",
-      "trustLevel": "reviewed",
-      "status": "active",
-      "ownerId": "owner-maya-chen",
-      "tags": ["looker", "exec"]
-    },
-    {
-      "id": "evt-play-completed",
-      "type": "event_definition",
-      "name": "play_completed",
-      "displayName": "Play Completed",
-      "description": "Emitted when a listening session completes a track.",
-      "grain": "event",
+      "id": "dim-fan",
+      "layerId": "layer-mart",
+      "domain": "growth",
+      "name": "dim_fan",
+      "displayName": "Fan Dimension (SCD2)",
+      "description": "Slowly changing dimension for fan/listener accounts.",
+      "grain": "fan_sk",
+      "columns": [
+        {
+          "id": "dim-fan-fan-sk",
+          "name": "fan_sk",
+          "dataType": "number(38,0)",
+          "logicalType": "integer",
+          "description": "Surrogate primary key",
+          "isPrimaryKey": true,
+          "isSurrogateKey": true
+        },
+        {
+          "id": "dim-fan-user-id",
+          "name": "user_id",
+          "dataType": "varchar(64)",
+          "logicalType": "string",
+          "description": "Natural key — hashed fan account id",
+          "isNaturalKey": true
+        },
+        {
+          "id": "dim-fan-display-name",
+          "name": "display_name",
+          "dataType": "varchar(256)",
+          "logicalType": "string",
+          "description": "Fan display name"
+        },
+        {
+          "id": "dim-fan-email",
+          "name": "email",
+          "dataType": "varchar(256)",
+          "logicalType": "string",
+          "description": "Fan email address (hashed)"
+        },
+        {
+          "id": "dim-fan-valid-from",
+          "name": "valid_from",
+          "dataType": "timestamp_tz",
+          "logicalType": "timestamp",
+          "description": "SCD2 row valid from",
+          "scdRole": "valid_from"
+        },
+        {
+          "id": "dim-fan-valid-to",
+          "name": "valid_to",
+          "dataType": "timestamp_tz",
+          "logicalType": "timestamp",
+          "description": "SCD2 row valid to (null = current)",
+          "scdRole": "valid_to"
+        },
+        {
+          "id": "dim-fan-is-current",
+          "name": "is_current",
+          "dataType": "boolean",
+          "logicalType": "boolean",
+          "description": "True if this is the current row",
+          "scdRole": "is_current"
+        }
+      ],
+      "modelingIntent": { "starRole": "dimension", "scdType": 2 },
       "trustLevel": "trusted",
       "status": "active",
-      "tags": ["taxonomy"]
-    },
-    {
-      "id": "ent-fan",
-      "type": "entity",
-      "name": "fan",
-      "displayName": "Fan (Listener)",
-      "description": "Registered listener account.",
-      "grain": "user_id",
-      "trustLevel": "trusted",
-      "status": "active",
-      "tags": ["semantic"]
+      "ownerId": "owner-maya-chen",
+      "teamId": "team-data-platform"
     },
     {
       "id": "dim-artist",
-      "type": "dimension",
-      "name": "artist",
-      "displayName": "Artist",
-      "description": "Creator profile dimension.",
-      "grain": "artist_id",
+      "layerId": "layer-mart",
+      "domain": "growth",
+      "name": "dim_artist",
+      "displayName": "Artist Dimension (SCD2)",
+      "description": "Slowly changing dimension for creator profiles.",
+      "grain": "artist_sk",
+      "columns": [
+        {
+          "id": "dim-artist-artist-sk",
+          "name": "artist_sk",
+          "dataType": "number(38,0)",
+          "logicalType": "integer",
+          "description": "Surrogate primary key",
+          "isPrimaryKey": true,
+          "isSurrogateKey": true
+        },
+        {
+          "id": "dim-artist-artist-id",
+          "name": "artist_id",
+          "dataType": "varchar(64)",
+          "logicalType": "string",
+          "description": "Natural key — artist platform id",
+          "isNaturalKey": true
+        },
+        {
+          "id": "dim-artist-display-name",
+          "name": "display_name",
+          "dataType": "varchar(256)",
+          "logicalType": "string",
+          "description": "Artist display name"
+        },
+        {
+          "id": "dim-artist-genre",
+          "name": "genre",
+          "dataType": "varchar(128)",
+          "logicalType": "string",
+          "description": "Primary genre of the artist"
+        },
+        {
+          "id": "dim-artist-valid-from",
+          "name": "valid_from",
+          "dataType": "timestamp_tz",
+          "logicalType": "timestamp",
+          "description": "SCD2 row valid from",
+          "scdRole": "valid_from"
+        },
+        {
+          "id": "dim-artist-valid-to",
+          "name": "valid_to",
+          "dataType": "timestamp_tz",
+          "logicalType": "timestamp",
+          "description": "SCD2 row valid to (null = current)",
+          "scdRole": "valid_to"
+        },
+        {
+          "id": "dim-artist-is-current",
+          "name": "is_current",
+          "dataType": "boolean",
+          "logicalType": "boolean",
+          "description": "True if this is the current row",
+          "scdRole": "is_current"
+        }
+      ],
+      "modelingIntent": { "starRole": "dimension", "scdType": 2 },
       "trustLevel": "trusted",
       "status": "active",
-      "tags": ["semantic"],
-      "metadata": {
-        "starSchemaRole": "dimension",
-        "scdType": "2",
-        "physical": {
-          "warehouse": "snowflake",
-          "database": "HA_ANALYTICS",
-          "schema": "MART",
-          "relation": "MART.SEMANTIC.DIM_ARTIST"
+      "ownerId": "owner-maya-chen",
+      "teamId": "team-data-platform"
+    },
+    {
+      "id": "fct-subscriber-health",
+      "layerId": "layer-mart",
+      "domain": "finance",
+      "name": "fct_subscriber_health",
+      "displayName": "Subscriber Health Snapshot",
+      "description": "Per-user subscription health fact for finance reporting.",
+      "grain": "user_id",
+      "columns": [
+        {
+          "id": "fct-sh-user-sk",
+          "name": "user_sk",
+          "dataType": "number(38,0)",
+          "logicalType": "integer",
+          "description": "Surrogate primary key and FK to dim_fan",
+          "isPrimaryKey": true,
+          "isForeignKey": true,
+          "foreignKeyTarget": { "modelId": "dim-fan", "columnId": "dim-fan-fan-sk" }
         },
-        "columns": [
-          { "name": "artist_sk", "physicalType": "number(38,0)", "keys": ["PK"] },
-          { "name": "artist_id", "physicalType": "varchar(64)", "keys": ["NK"] },
-          { "name": "display_name", "physicalType": "varchar(256)", "keys": [] },
-          { "name": "valid_from", "physicalType": "timestamp_tz(9)", "keys": ["SCD2"] },
-          { "name": "valid_to", "physicalType": "timestamp_tz(9)", "keys": ["SCD2"] },
-          { "name": "is_current", "physicalType": "boolean", "keys": ["SCD2"] }
-        ]
-      }
+        {
+          "id": "fct-sh-dunning-stage",
+          "name": "dunning_stage",
+          "dataType": "varchar(32)",
+          "logicalType": "string",
+          "description": "Current dunning stage for failed payment recovery"
+        },
+        {
+          "id": "fct-sh-mrr",
+          "name": "mrr",
+          "dataType": "number(18,2)",
+          "logicalType": "float",
+          "description": "Monthly recurring revenue for this subscriber"
+        },
+        {
+          "id": "fct-sh-churn-risk-score",
+          "name": "churn_risk_score",
+          "dataType": "float",
+          "logicalType": "float",
+          "description": "Heuristic churn risk score (0–100)"
+        }
+      ],
+      "modelingIntent": { "starRole": "fact" },
+      "trustLevel": "trusted",
+      "status": "active",
+      "ownerId": "owner-maya-chen",
+      "teamId": "team-data-platform"
+    },
+    {
+      "id": "growth-pulse-dashboard",
+      "layerId": "layer-consumption",
+      "name": "growth_pulse_dashboard",
+      "displayName": "Growth Pulse Dashboard",
+      "description": "Looker dashboard surfacing north-star growth KPIs for leadership reviews.",
+      "columns": [
+        {
+          "id": "dash-gp-waf",
+          "name": "weekly_active_fans",
+          "dataType": "integer",
+          "logicalType": "integer",
+          "description": "Weekly Active Fans KPI tile"
+        },
+        {
+          "id": "dash-gp-affinity-trend",
+          "name": "affinity_trend",
+          "dataType": "float",
+          "logicalType": "float",
+          "description": "Week-over-week affinity score trend"
+        },
+        {
+          "id": "dash-gp-top-artists",
+          "name": "top_artists_by_affinity",
+          "dataType": "string",
+          "logicalType": "string",
+          "description": "Ranked list of top artists by fan affinity score"
+        }
+      ],
+      "trustLevel": "reviewed",
+      "status": "active",
+      "ownerId": "owner-maya-chen",
+      "teamId": "team-data-platform",
+      "tags": ["looker", "exec"]
     },
     {
       "id": "legacy-mart-listens-daily",
-      "type": "mart_model",
+      "layerId": "layer-mart",
       "name": "legacy_mart_listens_daily",
       "displayName": "Legacy Daily Listens (deprecated)",
-      "description": "Superseded by int_user_day_listening.",
+      "description": "Superseded by int_user_day_listening. Do not use.",
       "grain": "user_day",
+      "columns": [],
       "trustLevel": "deprecated",
       "status": "deprecated",
       "ownerId": "owner-maya-chen",
@@ -294,118 +589,236 @@
   ],
   "edges": [
     {
-      "id": "e-src-raw-events",
-      "type": "feeds",
-      "sourceId": "src-snowplow",
-      "targetId": "raw-events",
-      "description": "Snowplow loader lands into warehouse raw schema."
-    },
-    {
-      "id": "e-src-raw-subs",
-      "type": "feeds",
-      "sourceId": "src-billing",
-      "targetId": "raw-subscriptions"
-    },
-    {
-      "id": "e-raw-stg-events",
-      "type": "upstream_of",
-      "sourceId": "raw-events",
-      "targetId": "stg-events-clean",
-      "description": "Staging depends on raw landing."
-    },
-    {
-      "id": "e-stg-int-listening",
-      "type": "upstream_of",
-      "sourceId": "stg-events-clean",
-      "targetId": "int-user-day-listening"
-    },
-    {
-      "id": "e-int-mart-affinity",
-      "type": "upstream_of",
-      "sourceId": "int-user-day-listening",
-      "targetId": "mart-fan-artist-week-affinity"
-    },
-    {
-      "id": "e-rawsubs-mart-health",
-      "type": "upstream_of",
-      "sourceId": "raw-subscriptions",
-      "targetId": "mart-subscriber-health"
-    },
-    {
-      "id": "e-mart-defines-metric-waf",
-      "type": "defines",
-      "sourceId": "mart-fan-artist-week-affinity",
-      "targetId": "metric-weekly-active-fans",
-      "description": "Metric is computed from the fan-artist weekly affinity mart."
-    },
-    {
-      "id": "e-mart-defines-metric-churn",
-      "type": "defines",
-      "sourceId": "mart-subscriber-health",
-      "targetId": "metric-churn-risk",
-      "description": "Draft churn heuristic blends subscription health features."
-    },
-    {
-      "id": "e-metric-dash-waf",
-      "type": "powers",
-      "sourceId": "metric-weekly-active-fans",
-      "targetId": "dash-growth-pulse"
-    },
-    {
-      "id": "e-metric-churn-dash",
-      "type": "powers",
-      "sourceId": "metric-churn-risk",
-      "targetId": "dash-growth-pulse"
-    },
-    {
-      "id": "e-evt-raw",
+      "id": "e-snowplow-maps-to-raw-events",
       "type": "maps_to",
-      "sourceId": "evt-play-completed",
-      "targetId": "raw-events",
-      "description": "Event rows land in raw events table."
+      "sourceId": "src-snowplow",
+      "targetId": "raw-snowplow-events",
+      "description": "Snowplow loader lands events into raw warehouse schema."
     },
     {
-      "id": "e-mart-ent-fan",
-      "type": "defines",
-      "sourceId": "mart-fan-artist-week-affinity",
-      "targetId": "ent-fan"
+      "id": "e-stripe-maps-to-raw-subs",
+      "type": "maps_to",
+      "sourceId": "src-stripe",
+      "targetId": "raw-stripe-subscriptions",
+      "description": "Stripe batch API loads subscription records into raw schema."
     },
     {
-      "id": "e-mart-dim-artist",
-      "type": "defines",
-      "sourceId": "mart-fan-artist-week-affinity",
-      "targetId": "dim-artist"
-    },
-    {
-      "id": "e-mart-join",
-      "type": "joins_with",
-      "sourceId": "mart-fan-artist-week-affinity",
-      "targetId": "mart-subscriber-health",
-      "description": "Join on user_id for subscriber context; confirm filter to active subscribers only.",
-      "metadata": {
-        "approved": true,
-        "joinKeys": ["user_id"],
-        "governanceNotes": ["Approved by Data Platform on 2026-01-10 for growth analytics."]
-      }
-    },
-    {
-      "id": "e-team-owns",
-      "type": "owned_by",
-      "sourceId": "mart-fan-artist-week-affinity",
-      "targetId": "team-data-platform"
-    },
-    {
-      "id": "e-owner-owns-mart",
-      "type": "owned_by",
-      "sourceId": "mart-fan-artist-week-affinity",
-      "targetId": "owner-maya-chen"
-    },
-    {
-      "id": "e-legacy-superseded",
+      "id": "e-raw-events-depends-stg",
       "type": "depends_on",
-      "sourceId": "legacy-mart-listens-daily",
+      "sourceId": "stg-snowplow-events-clean",
+      "targetId": "raw-snowplow-events",
+      "description": "Staging model depends on raw Snowplow events."
+    },
+    {
+      "id": "e-stg-depends-int-listening",
+      "type": "depends_on",
+      "sourceId": "int-user-day-listening",
+      "targetId": "stg-snowplow-events-clean",
+      "description": "Intermediate listening model depends on clean staging events."
+    },
+    {
+      "id": "e-int-depends-fct-affinity",
+      "type": "depends_on",
+      "sourceId": "fct-fan-artist-week-affinity",
       "targetId": "int-user-day-listening",
-      "description": "Logical successor model (do not use legacy)."
+      "description": "Fan-artist affinity fact depends on user-day listening intermediate."
+    },
+    {
+      "id": "e-raw-subs-depends-fct-health",
+      "type": "depends_on",
+      "sourceId": "fct-subscriber-health",
+      "targetId": "raw-stripe-subscriptions",
+      "description": "Subscriber health fact depends on raw Stripe subscriptions."
+    },
+    {
+      "id": "e-fct-affinity-defines-waf",
+      "type": "defines",
+      "sourceId": "fct-fan-artist-week-affinity",
+      "targetId": "met-waf",
+      "description": "Weekly active fans metric is computed from the fan-artist affinity fact."
+    },
+    {
+      "id": "e-fct-health-defines-churn",
+      "type": "defines",
+      "sourceId": "fct-subscriber-health",
+      "targetId": "met-churn-risk",
+      "description": "Churn risk metric is derived from subscriber health fact."
+    },
+    {
+      "id": "e-waf-powers-dashboard",
+      "type": "powers",
+      "sourceId": "met-waf",
+      "targetId": "growth-pulse-dashboard",
+      "description": "WAF metric powers the Growth Pulse dashboard."
+    },
+    {
+      "id": "e-fct-affinity-joins-dim-fan",
+      "type": "joins_with",
+      "sourceId": "fct-fan-artist-week-affinity",
+      "targetId": "dim-fan",
+      "description": "Fact joins to fan dimension on fan_sk."
+    },
+    {
+      "id": "e-fct-affinity-joins-dim-artist",
+      "type": "joins_with",
+      "sourceId": "fct-fan-artist-week-affinity",
+      "targetId": "dim-artist",
+      "description": "Fact joins to artist dimension on artist_sk."
     }
-  ]
+  ],
+  "metrics": [
+    {
+      "id": "met-waf",
+      "name": "weekly_active_fans",
+      "displayName": "Weekly Active Fans (WAF)",
+      "description": "Count of distinct fans with at least 1 minute listened in a rolling 7-day window.",
+      "expression": "COUNT(DISTINCT fan_sk) WHERE minutes_listened >= 1",
+      "aggregation": "count_distinct",
+      "timeGrain": "weekly",
+      "sourceModelIds": ["fct-fan-artist-week-affinity"],
+      "domain": "growth",
+      "isKPI": true,
+      "ownerId": "owner-maya-chen",
+      "teamId": "team-data-platform",
+      "trustLevel": "trusted",
+      "status": "active",
+      "tags": ["kpi", "north-star"]
+    },
+    {
+      "id": "met-churn-risk",
+      "name": "churn_risk_score",
+      "displayName": "Churn Risk Score",
+      "description": "Heuristic score 0–100 derived from listening drop-offs and billing dunning signals.",
+      "sourceModelIds": ["fct-subscriber-health"],
+      "domain": "finance",
+      "ownerId": "owner-maya-chen",
+      "teamId": "team-data-platform",
+      "trustLevel": "draft",
+      "status": "draft",
+      "tags": ["experimental"],
+      "caveats": ["Draft model — do not use for finance reporting."]
+    }
+  ],
+  "dataMarts": [
+    {
+      "id": "dm-growth",
+      "name": "growth_mart",
+      "description": "Growth domain mart combining fan-artist affinity facts with fan and artist dimensions.",
+      "domain": "growth",
+      "factModelIds": ["fct-fan-artist-week-affinity"],
+      "dimensionModelIds": ["dim-fan", "dim-artist"],
+      "metricIds": ["met-waf"],
+      "joinPaths": [
+        {
+          "fromModelId": "fct-fan-artist-week-affinity",
+          "toModelId": "dim-fan",
+          "joinKeys": [{ "fromColumn": "fan_sk", "toColumn": "fan_sk" }],
+          "joinType": "left"
+        },
+        {
+          "fromModelId": "fct-fan-artist-week-affinity",
+          "toModelId": "dim-artist",
+          "joinKeys": [{ "fromColumn": "artist_sk", "toColumn": "artist_sk" }],
+          "joinType": "left"
+        }
+      ],
+      "ownerId": "owner-maya-chen",
+      "teamId": "team-data-platform"
+    }
+  ],
+  "blueprints": [
+    {
+      "id": "bp-fct-listen-sessions",
+      "name": "fct_listen_sessions",
+      "displayName": "Fct — Listen Sessions (Blueprint)",
+      "description": "Planned session-grain fact table for fine-grained listening analytics.",
+      "layerId": "layer-mart",
+      "domain": "growth",
+      "grain": "session_id",
+      "columns": [
+        {
+          "id": "bp-ls-session-id",
+          "name": "session_id",
+          "dataType": "varchar(64)",
+          "logicalType": "string",
+          "description": "Unique session identifier",
+          "isPrimaryKey": true
+        },
+        {
+          "id": "bp-ls-user-sk",
+          "name": "user_sk",
+          "dataType": "number(38,0)",
+          "logicalType": "integer",
+          "description": "Foreign key to dim_fan",
+          "isForeignKey": true
+        },
+        {
+          "id": "bp-ls-session-start",
+          "name": "session_start_ts",
+          "dataType": "timestamp_tz",
+          "logicalType": "timestamp",
+          "description": "Session start timestamp"
+        },
+        {
+          "id": "bp-ls-session-duration",
+          "name": "session_duration_minutes",
+          "dataType": "float",
+          "logicalType": "float",
+          "description": "Total session duration in minutes"
+        }
+      ],
+      "modelingIntent": { "starRole": "fact" },
+      "sourceRefs": [
+        {
+          "modelId": "int-user-day-listening",
+          "columnsUsed": ["user_sk", "listening_date", "minutes_listened", "session_count"]
+        }
+      ],
+      "status": "drafting",
+      "trustLevel": "draft",
+      "ownerId": "owner-maya-chen",
+      "teamId": "team-data-platform",
+      "notes": "Will replace legacy_mart_listens_daily once session boundaries are confirmed.",
+      "createdAt": "2026-01-15T09:00:00Z",
+      "updatedAt": "2026-03-20T14:30:00Z"
+    }
+  ],
+  "owners": [
+    {
+      "id": "owner-maya-chen",
+      "name": "maya.chen",
+      "displayName": "Maya Chen",
+      "description": "Analytics engineering lead.",
+      "email": "maya.chen@harmonicaudio.com"
+    }
+  ],
+  "teams": [
+    {
+      "id": "team-data-platform",
+      "name": "data_platform",
+      "displayName": "Data Platform",
+      "description": "Owns core pipelines and modeling standards.",
+      "slackChannel": "#data-platform"
+    }
+  ],
+  "governanceTemplate": "kimball",
+  "governanceRules": {
+    "naming": {
+      "modelPatterns": {
+        "staging": "^stg_",
+        "intermediate": "^int_",
+        "mart": "^(fct_|dim_)"
+      },
+      "columnPatterns": [
+        {
+          "pattern": "_sk$",
+          "description": "Surrogate keys must end with _sk"
+        },
+        {
+          "pattern": "_id$",
+          "description": "Natural and source keys must end with _id"
+        }
+      ]
+    }
+  }
 }
